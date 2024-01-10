@@ -1,14 +1,20 @@
-Compilation (Same as default premake4/make combination)
+## Compilation (Same as default premake4/make combination)
 
 Inside the unzipped directory, build the code as follow:  
-$ premake4 gmake
-$ make
+
+    $ premake4 gmake
+    $ make
 
 To run the program, type the command:
-$ ./A0
 
-The assignment is tested on the VM
+    $ ./A0
 
-Manual
+The assignment is tested on the VM.
+
+---
+
+## Manual
 
 No additional details added other than the assignment specification
+
+---
