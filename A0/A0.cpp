@@ -160,7 +160,6 @@ void A0::uploadUniformsToShader()
     GLint uniformLocation_modelMatrix = m_shader.getUniformLocation("transform");
     glUniformMatrix4fv(uniformLocation_modelMatrix, 1, GL_FALSE,
                        glm::value_ptr(transform));
-
     m_shader.disable();
 
     CHECK_GL_ERRORS;
