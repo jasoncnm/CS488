@@ -32,7 +32,10 @@ protected:
 private:
     void initGrid();
     void initCubes();
+    void initAvatar();
     void resetGridStates();
+    void findStartPoint();
+    bool noWall(int x, int y);
 
     // Fields related to the shader and uniforms.
     ShaderProgram m_shader;
@@ -46,6 +49,8 @@ private:
     GLuint m_grid_vbo; // Vertex Buffer Object
     GLuint cubesVao;
     GLuint cubesVbo;
+    GLuint avatarVao;
+    GLuint avatarVbo;
 
     // Matrices controlling the camera and projection.
     glm::mat4 proj;
@@ -56,4 +61,5 @@ private:
     int current_col;
     int cubeCount;
     float cubeHeight;
+    int  avatarPos[3];
 };

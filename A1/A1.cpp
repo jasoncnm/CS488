@@ -21,11 +21,16 @@ static const size_t DIM = 16;
 //----------------------------------------------------------------------------------------
 // Constructor
 A1::A1()
-    : current_col( 0 )
+        : current_col( 0 )
 {
     colour[0] = 0.0f;
     colour[1] = 0.0f;
     colour[2] = 0.0f;
+
+    avatarPos[0] = 0.0f;
+    avatarPos[1] = 0.0f;
+    avatarPos[2] = 0.0f;
+    
 }
 
 //----------------------------------------------------------------------------------------
@@ -39,6 +44,7 @@ A1::~A1()
 /*
  * Called once, at program start.
  */
+
 void A1::init()
 {
     // Initialize random number generator
@@ -46,14 +52,14 @@ void A1::init()
     srandom(rseed);
     // Print random number seed in case we want to rerun with
     // same random numbers
+
     cout << "Random number seed = " << rseed << endl;
     
-
     // DELETE FROM HERE...
     m = new Maze(DIM);
     m->digMaze();
     m->printMaze();
-    
+    findStartPoint();
     // ...TO HERE
     
     // Set the background colour.
@@ -71,12 +77,13 @@ void A1::init()
     P_uni = m_shader.getUniformLocation( "P" );
     V_uni = m_shader.getUniformLocation( "V" );
     M_uni = m_shader.getUniformLocation( "M" );
-    col_uni = m_shader.getUniformLocation( "colour" );
+    col_uni = m_shader.getUniformLocation( "colour" );                                                           
 
     cubeHeight = 1.0f;
     initGrid();
     initCubes();
-
+    initAvatar();
+     
     // Set up initial view and projection matrices (need to do this here,
     // since it depends on the GLFW window being set up correctly).
     view = glm::lookAt( 
@@ -88,6 +95,84 @@ void A1::init()
         glm::radians( 30.0f ),
         float( m_framebufferWidth ) / float( m_framebufferHeight ),
         1.0f, 1000.0f );
+}
+
+void A1::findStartPoint() {
+    for (int y = 0; y < m->getDim(); y++) {
+        if (m->getValue(0, y) == 0) {
+            avatarPos[1] = y;
+        }
+    }
+}
+
+void A1::initAvatar() {
+    // TODO: Cube for now, need to be a circle
+    vec3 ref = vec3(avatarPos[0], avatarPos[2], avatarPos[1]);
+    vec3 avatarVertices[6*6] = {
+        ref,
+        ref + vec3(1.0f, 0.0f, 0.0f),
+        ref + vec3(0.0f, 0.0f, 1.0f),
+        ref + vec3(1.0f, 0.0f, 1.0f),
+        ref + vec3(1.0f, 0.0f, 0.0f),
+        ref + vec3(0.0f, 0.0f, 1.0f),
+        // NOTE: Back face
+        ref,
+        ref + vec3(1.0f, 0.0f, 0.0f),
+        ref + vec3(0.0f, 1.0f, 0.0f),
+        ref + vec3(1.0f, 1.0f, 0.0f),
+        ref + vec3(1.0f, 0.0f, 0.0f),
+        ref + vec3(0.0f, 1.0f, 0.0f),
+        // NOTE: Left face
+        ref,
+        ref + vec3(0.0f, 1.0f, 0.0f),
+        ref + vec3(0.0f, 0.0f, 1.0f),
+        ref + vec3(0.0f, 1.0f, 1.0f),
+        ref + vec3(0.0f, 1.0f, 0.0f),
+        ref + vec3(0.0f, 0.0f, 1.0f),
+        // NOTE: Right face
+        ref + vec3(1.0f, 0.0f, 0.0f),
+        ref + vec3(1.0f, 1.0f, 0.0f),
+        ref + vec3(1.0f, 0.0f, 1.0f),
+        ref + vec3(1.0f, 1.0f, 1.0f),
+        ref + vec3(1.0f, 1.0f, 0.0f),
+        ref + vec3(1.0f, 0.0f, 1.0f),
+        // NOTE: Front face
+        ref + vec3(0.0f, 0.0f, 1.0f),
+        ref + vec3(1.0f, 0.0f, 1.0f),
+        ref + vec3(0.0f, 1.0f, 1.0f),
+        ref + vec3(1.0f, 1.0f, 1.0f),
+        ref + vec3(1.0f, 0.0f, 1.0f),
+        ref + vec3(0.0f, 1.0f, 1.0f),
+        // NOTE: Top face
+        ref + vec3(0.0f, 1.0f, 0.0f),
+        ref + vec3(1.0f, 1.0f, 0.0f),
+        ref + vec3(0.0f, 1.0f, 1.0f),
+        ref + vec3(1.0f, 1.0f, 1.0f),
+        ref + vec3(1.0f, 1.0f, 0.0f),
+        ref + vec3(0.0f, 1.0f, 1.0f),
+        
+    };
+    glGenVertexArrays(1, &avatarVao);
+    glBindVertexArray(avatarVao);
+
+    glGenBuffers(1, &avatarVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, avatarVbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(avatarVertices),
+                 avatarVertices,
+                 GL_STATIC_DRAW);
+
+
+    GLuint posAttrib = m_shader.getAttribLocation( "position" );
+    glEnableVertexAttribArray( posAttrib );
+    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
+                           nullptr);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    CHECK_GL_ERRORS;
+    
 }
 
 void A1::initCubes() {
@@ -147,7 +232,7 @@ void A1::initCubes() {
                 cubesVertices[ct+3] = ref + vec3(1.0f, cubeHeight, 1.0f);
                 cubesVertices[ct+4] = ref + vec3(1.0f, cubeHeight, 0.0f);
                 cubesVertices[ct+5] = ref + vec3(0.0f, cubeHeight, 1.0f);
-                ct += 6;   
+                ct += 6;
             }
         }
     }
@@ -237,7 +322,7 @@ void A1::appLogic()
 {
     // Place per frame, application logic here ...
 
-    cubeHeight = clamp(cubeHeight, 1.0f, 5.0f);
+    cubeHeight = clamp(cubeHeight, 1.0f, 3.0f);
     
 }
 
@@ -329,11 +414,17 @@ void A1::draw()
         glBindVertexArray( m_grid_vao );
         glUniform3f( col_uni, 1, 1, 1 );
         glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
-
+#if 1
         // Draw the cubes
         glBindVertexArray( cubesVao );
         glUniform3f( col_uni, 0.3f, 0.3f, 0.7f );
-        glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6); 
+        glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6);
+#endif
+        // Draw Avatar
+        glBindVertexArray( avatarVao );
+        glUniform3f( col_uni, 0.7f, 0.3f, 0.3f );
+        glDrawArrays( GL_TRIANGLES, 0, 6 * 6);
+            
         // Highlight the active square.
     m_shader.disable();
 
@@ -423,6 +514,12 @@ bool A1::windowResizeEvent(int width, int height) {
 }
 
 //----------------------------------------------------------------------------------------
+bool A1::noWall(int x, int y) {
+    bool result = x == -1 || y == -1 || x == DIM || y == DIM || !m->getValue(x, y);
+    return result;
+}
+
+//----------------------------------------------------------------------------------------
 /*
  * Event handler.  Handles key input events.
  */
@@ -442,14 +539,50 @@ bool A1::keyInputEvent(int key, int action, int mods) {
         }
 
         if (key == GLFW_KEY_SPACE) {
-            cubeHeight += 0.5f;
+            cubeHeight += 0.2f;
             initCubes();
         }
 
         if (key == GLFW_KEY_BACKSPACE) {
-            cubeHeight -= 0.5f;
+            cubeHeight -= 0.2f;
             initCubes();
         }
+
+        if (key == GLFW_KEY_LEFT) {
+            if (avatarPos[0] > -1
+                && noWall(avatarPos[0] - 1, avatarPos[1])) {
+                avatarPos[0] -= 1;
+                initAvatar();
+            }
+        }
+        
+        if (key == GLFW_KEY_RIGHT) {
+            if ((avatarPos[0] < DIM || avatarPos[0] == -1)
+                && noWall(avatarPos[0] + 1, avatarPos[1])){
+                avatarPos[0] += 1;
+                initAvatar();
+            }
+        }
+        
+        if (key == GLFW_KEY_UP) {
+            if (avatarPos[1] > -1
+                && noWall(avatarPos[0], avatarPos[1] - 1))
+            {
+                avatarPos[1] -= 1;
+                initAvatar();
+            }
+        }
+        
+        if (key == GLFW_KEY_DOWN) {
+            
+            if ((avatarPos[1] < DIM || avatarPos[1] == -1)
+                && noWall(avatarPos[0], avatarPos[1] + 1))
+            {
+                avatarPos[1] += 1;
+                initAvatar();
+            }
+        }
+        
     }
 
     return eventHandled;
