@@ -62,7 +62,9 @@ private:
     Maze *m;
     float colour[3];
     int current_col;
-    int cubeCount;
+    int cubeCount;        
+    int sectorCount = 20;
+    int stackCount = 20;
     float cubeHeight;
     int  avatarPos[3];
 };

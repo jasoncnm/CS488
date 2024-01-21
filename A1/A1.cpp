@@ -17,6 +17,7 @@ using namespace glm;
 using namespace std;
 
 static const size_t DIM = 16;
+const float PI = 3.14159265f;
 
 //----------------------------------------------------------------------------------------
 // Constructor
@@ -80,8 +81,8 @@ void A1::init()
     col_uni = m_shader.getUniformLocation( "colour" );                                                           
 
     cubeHeight = 1.0f;
-    initGrid();
     initFloor();
+    initGrid();
     initCubes();
     initAvatar();
      
@@ -139,6 +140,7 @@ void A1::initFloor() {
     CHECK_GL_ERRORS;       
 }
 
+#if 0
 void A1::initAvatar() {
     // TODO: Cube for now, need to be a sphere
     vec3 ref = vec3(avatarPos[0], avatarPos[2], avatarPos[1]);
@@ -208,7 +210,96 @@ void A1::initAvatar() {
     CHECK_GL_ERRORS;
     
 }
+#else
 
+void A1::initAvatar() {
+    
+    int size = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
+    vec3 avatarVertices[size];
+    vec3 offset = vec3(0.5f, 0.5f, 0.5f) + vec3(avatarPos[0], avatarPos[2], avatarPos[1]);
+
+    float thPerSector = 2 * PI / sectorCount;
+    float phiPerStack = PI / stackCount;
+
+    size_t ct = 0;
+    for (int i = 0; i < stackCount; i++) {
+        float phi = PI / 2 - i * phiPerStack;
+        float nphi = PI / 2 - (i + 1) * phiPerStack;
+        for (int j = 0; j < sectorCount; j++) {
+            float theta = j * thPerSector;
+            float ntheta = (j + 1) * thPerSector;
+
+            if (i > 0 && i < (stackCount - 1)) {
+                avatarVertices[ct]   = vec3(0.5f*cos(phi) * cos(theta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(phi) * sin(theta)) + offset;
+                avatarVertices[ct+1] = vec3(0.5f*cos(phi) * cos(ntheta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(phi) * sin(ntheta)) + offset;
+                avatarVertices[ct+2] = vec3(0.5f*cos(nphi) * cos(theta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(theta)) + offset;
+                avatarVertices[ct+3] = vec3(0.5f*cos(nphi) * cos(ntheta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(ntheta)) + offset;
+                avatarVertices[ct+4] = vec3(0.5f*cos(phi) * cos(ntheta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(phi) * sin(ntheta)) + offset;
+                avatarVertices[ct+5] = vec3(0.5f*cos(nphi) * cos(theta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(theta)) + offset;
+                ct += 6;
+            } else if (i == 0) {
+                avatarVertices[ct]   = vec3(0.5f*cos(phi) * cos(theta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(phi) * sin(theta)) + offset;
+                avatarVertices[ct+1] = vec3(0.5f*cos(nphi) * cos(theta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(theta)) + offset;
+                avatarVertices[ct+2] = vec3(0.5f*cos(nphi) * cos(ntheta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(ntheta)) + offset;
+                ct += 3;
+            } else {
+                avatarVertices[ct]   = vec3(0.5f*cos(phi) * cos(theta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(phi) * sin(theta)) + offset;
+                avatarVertices[ct+1] = vec3(0.5f*cos(phi) * cos(ntheta),
+                                            0.5f*sin(phi),
+                                            0.5f*cos(nphi) * sin(ntheta)) + offset;
+                avatarVertices[ct+2] = vec3(0.5f*cos(nphi) * cos(theta),
+                                            0.5f*sin(nphi),
+                                            0.5f*cos(nphi) * sin(theta)) + offset;
+                ct += 3;
+            }
+        }
+    }
+
+        
+    glGenVertexArrays(1, &avatarVao);
+    glBindVertexArray(avatarVao);
+
+    glGenBuffers(1, &avatarVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, avatarVbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(avatarVertices),
+                 avatarVertices,
+                 GL_STATIC_DRAW);
+
+
+    GLuint posAttrib = m_shader.getAttribLocation( "position" );
+    glEnableVertexAttribArray( posAttrib );
+    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
+                            nullptr);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    CHECK_GL_ERRORS;
+
+}
+
+#endif 
 void A1::initCubes() {
     cubeCount = 0;
     size_t mazeDim = m->getDim();
@@ -442,16 +533,16 @@ void A1::draw()
         glUniformMatrix4fv( P_uni, 1, GL_FALSE, value_ptr( proj ) );
         glUniformMatrix4fv( V_uni, 1, GL_FALSE, value_ptr( view ) );
         glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
-
-        // Draw the floor
-        glBindVertexArray( floorVao );
-        glUniform3f( col_uni, 0.5f, 0.5f, 0.5f );
-        glDrawArrays( GL_TRIANGLES, 0, 6 );
         
         // Just draw the grid for now.
         glBindVertexArray( m_grid_vao );
         glUniform3f( col_uni, 1, 1, 1 );
         glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
+
+        // Draw the floor
+        glBindVertexArray( floorVao );
+        glUniform3f( col_uni, 0.5f, 0.5f, 0.5f );
+        glDrawArrays( GL_TRIANGLES, 0, 6 );
 
         // Draw the cubes
         glBindVertexArray( cubesVao );
@@ -461,7 +552,8 @@ void A1::draw()
         // Draw Avatar
         glBindVertexArray( avatarVao );
         glUniform3f( col_uni, 0.7f, 0.3f, 0.3f );
-        glDrawArrays( GL_TRIANGLES, 0, 6 * 6);
+        int numVerts = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
+        glDrawArrays( GL_TRIANGLES, 0, numVerts);
             
         // Highlight the active square.
     m_shader.disable();
