@@ -81,6 +81,7 @@ void A1::init()
 
     cubeHeight = 1.0f;
     initGrid();
+    initFloor();
     initCubes();
     initAvatar();
      
@@ -103,6 +104,39 @@ void A1::findStartPoint() {
             avatarPos[1] = y;
         }
     }
+}
+
+void A1::initFloor() {
+    
+    vec3 floorVertices[6] = {
+        vec3(0.0f, 0.0f, 0.0f),
+        vec3(0.0f, 0.0f, DIM),
+        vec3(DIM, 0.0f, 0.0f),
+        vec3(DIM, 0.0f, DIM),
+        vec3(0.0f, 0.0f, DIM),
+        vec3(DIM, 0.0f, 0.0f)         
+    };
+      
+    glGenVertexArrays(1, &floorVao);
+    glBindVertexArray(floorVao);
+
+    glGenBuffers(1, &floorVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, floorVbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(floorVertices),
+                 floorVertices,
+                 GL_STATIC_DRAW);
+
+
+    GLuint posAttrib = m_shader.getAttribLocation( "position" );
+    glEnableVertexAttribArray( posAttrib );
+    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
+                            nullptr);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    CHECK_GL_ERRORS;       
 }
 
 void A1::initAvatar() {
@@ -237,7 +271,6 @@ void A1::initCubes() {
         }
     }
     
-    cout << "Cube Count " << cubeCount << endl;
     glGenVertexArrays(1, &cubesVao);
     glBindVertexArray(cubesVao);
 
@@ -263,7 +296,7 @@ void A1::initCubes() {
 
 void A1::initGrid()
 {
-    size_t sz = 3 * 2 * 2 * (DIM+3); // 228
+    size_t sz = 3 * 2 * 2 * (DIM+3);
 
     float *verts = new float[ sz ];
     size_t ct = 0;
@@ -410,16 +443,21 @@ void A1::draw()
         glUniformMatrix4fv( V_uni, 1, GL_FALSE, value_ptr( view ) );
         glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 
+        // Draw the floor
+        glBindVertexArray( floorVao );
+        glUniform3f( col_uni, 0.5f, 0.5f, 0.5f );
+        glDrawArrays( GL_TRIANGLES, 0, 6 );
+        
         // Just draw the grid for now.
         glBindVertexArray( m_grid_vao );
         glUniform3f( col_uni, 1, 1, 1 );
         glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
-#if 1
+
         // Draw the cubes
         glBindVertexArray( cubesVao );
         glUniform3f( col_uni, 0.3f, 0.3f, 0.7f );
         glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6);
-#endif
+
         // Draw Avatar
         glBindVertexArray( avatarVao );
         glUniform3f( col_uni, 0.7f, 0.3f, 0.3f );

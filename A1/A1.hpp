@@ -33,6 +33,7 @@ private:
     void initGrid();
     void initCubes();
     void initAvatar();
+    void initFloor();
     void resetGridStates();
     void findStartPoint();
     bool noWall(int x, int y);
@@ -51,6 +52,8 @@ private:
     GLuint cubesVbo;
     GLuint avatarVao;
     GLuint avatarVbo;
+    GLuint floorVao;
+    GLuint floorVbo;
 
     // Matrices controlling the camera and projection.
     glm::mat4 proj;
