@@ -140,7 +140,7 @@ void A1::initFloor() {
 }
 
 void A1::initAvatar() {
-    // TODO: Cube for now, need to be a circle
+    // TODO: Cube for now, need to be a sphere
     vec3 ref = vec3(avatarPos[0], avatarPos[2], avatarPos[1]);
     vec3 avatarVertices[6*6] = {
         ref,
@@ -591,6 +591,11 @@ bool A1::keyInputEvent(int key, int action, int mods) {
                 && noWall(avatarPos[0] - 1, avatarPos[1])) {
                 avatarPos[0] -= 1;
                 initAvatar();
+            } else if (mods == GLFW_MOD_SHIFT) {
+                avatarPos[0] -= 1;
+                m->setValue( avatarPos[0], avatarPos[1], 0 );
+                initCubes();
+                initAvatar();
             }
         }
         
@@ -598,6 +603,11 @@ bool A1::keyInputEvent(int key, int action, int mods) {
             if ((avatarPos[0] < DIM || avatarPos[0] == -1)
                 && noWall(avatarPos[0] + 1, avatarPos[1])){
                 avatarPos[0] += 1;
+                initAvatar();
+            } else if (mods == GLFW_MOD_SHIFT) {
+                avatarPos[0] += 1;
+                m->setValue( avatarPos[0], avatarPos[1], 0 );
+                initCubes();
                 initAvatar();
             }
         }
@@ -607,6 +617,11 @@ bool A1::keyInputEvent(int key, int action, int mods) {
                 && noWall(avatarPos[0], avatarPos[1] - 1))
             {
                 avatarPos[1] -= 1;
+                initAvatar();
+            } else if (mods == GLFW_MOD_SHIFT) {
+                avatarPos[1] -= 1;
+                m->setValue( avatarPos[0], avatarPos[1], 0 );
+                initCubes();
                 initAvatar();
             }
         }
@@ -618,9 +633,13 @@ bool A1::keyInputEvent(int key, int action, int mods) {
             {
                 avatarPos[1] += 1;
                 initAvatar();
+            } else if (mods == GLFW_MOD_SHIFT) {
+                avatarPos[1] += 1;
+                m->setValue( avatarPos[0], avatarPos[1], 0 );
+                initCubes();
+                initAvatar();
             }
-        }
-        
+        }        
     }
 
     return eventHandled;
