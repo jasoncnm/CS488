@@ -24,9 +24,26 @@ const float PI = 3.14159265f;
 A1::A1()
         : current_col( 0 )
 {
-    colour[0] = 0.0f;
-    colour[1] = 0.0f;
-    colour[2] = 0.0f;
+    widgetColourF[0] = 0.5f;
+    widgetColourF[1] = 0.5f;
+    widgetColourF[2] = 0.5f;
+
+    widgetColourW[0] = 0.3f;
+    widgetColourW[1] = 0.3f;
+    widgetColourW[2] = 0.7f;
+    widgetColourA[0] = 0.7f;
+    widgetColourA[1] = 0.3f;
+    widgetColourA[2] = 0.3f;
+
+    colourF[0] = 0.5f;
+    colourF[1] = 0.5f;
+    colourF[2] = 0.5f;
+    colourW[0] = 0.3f;
+    colourW[1] = 0.3f;
+    colourW[2] = 0.7f;
+    colourA[0] = 0.7f;
+    colourA[1] = 0.30f;
+    colourA[2] = 0.3f;
 
     avatarPos[0] = 0.0f;
     avatarPos[1] = 0.0f;
@@ -56,13 +73,8 @@ void A1::init()
 
     cout << "Random number seed = " << rseed << endl;
     
-    // DELETE FROM HERE...
     m = new Maze(DIM);
-    m->digMaze();
-    m->printMaze();
-    findStartPoint();
-    // ...TO HERE
-    
+        
     // Set the background colour.
     glClearColor( 0.3, 0.5, 0.7, 1.0 );
 
@@ -100,6 +112,10 @@ void A1::init()
 }
 
 void A1::findStartPoint() {
+    avatarPos[0] = 0;
+    avatarPos[1] = 0;
+    avatarPos[2] = 0;
+            
     for (int y = 0; y < m->getDim(); y++) {
         if (m->getValue(0, y) == 0) {
             avatarPos[1] = y;
@@ -213,7 +229,7 @@ void A1::initAvatar() {
 #else
 
 void A1::initAvatar() {
-    
+
     int size = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
     vec3 avatarVertices[size];
     vec3 offset = vec3(0.5f, 0.5f, 0.5f) + vec3(avatarPos[0], avatarPos[2], avatarPos[1]);
@@ -491,12 +507,42 @@ void A1::guiLogic()
         // displayed.
 
         ImGui::PushID( 0 );
-        ImGui::ColorEdit3( "##Colour", colour );
+        ImGui::ColorEdit3( "##Colour", widgetColourF );
         ImGui::SameLine();
-        if( ImGui::RadioButton( "##Col", &current_col, 0 ) ) {
+        if( ImGui::RadioButton( "Floor colour##Col", &current_col, 0 ) ) {
             // Select this colour.
+            colourF[0] = widgetColourF[0];
+            colourF[1] = widgetColourF[1];
+            colourF[2] = widgetColourF[2];
+            
         }
         ImGui::PopID();
+
+        ImGui::PushID( 1 );
+        ImGui::ColorEdit3( "##Colour", widgetColourW );
+        ImGui::SameLine();                
+        if( ImGui::RadioButton( "Wall colour##Col", &current_col, 1 ) ) {
+            // Select this colour.
+            colourW[0] = widgetColourW[0];
+            colourW[1] = widgetColourW[1];
+            colourW[2] = widgetColourW[2];
+
+        }
+        ImGui::PopID();
+        
+        ImGui::PushID( 2 );
+        ImGui::ColorEdit3( "##Colour", widgetColourA );
+        ImGui::SameLine();
+        if( ImGui::RadioButton( "Avatar colour##Col", &current_col, 2 ) ) {
+            // Select this colour.
+            colourA[0] = widgetColourA[0];
+            colourA[1] = widgetColourA[1];
+            colourA[2] = widgetColourA[2];
+
+        }
+        ImGui::PopID();
+
+        
 
 /*
         // For convenience, you can uncomment this to show ImGui's massive
@@ -523,10 +569,13 @@ void A1::guiLogic()
  */
 void A1::draw()
 {
+    vec3 axis(0.0f, 1.0f, 0.0f);
     // Create a global transformation for the model (centre it).
     mat4 W;
     W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
+    W = glm::rotate(W, rotation, axis);
 
+    
     m_shader.enable();
         glEnable( GL_DEPTH_TEST );
 
@@ -541,17 +590,17 @@ void A1::draw()
 
         // Draw the floor
         glBindVertexArray( floorVao );
-        glUniform3f( col_uni, 0.5f, 0.5f, 0.5f );
+        glUniform3f( col_uni, colourF[0], colourF[1], colourF[2] );
         glDrawArrays( GL_TRIANGLES, 0, 6 );
 
         // Draw the cubes
         glBindVertexArray( cubesVao );
-        glUniform3f( col_uni, 0.3f, 0.3f, 0.7f );
+        glUniform3f( col_uni, colourW[0], colourW[1], colourW[2] );
         glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6);
 
         // Draw Avatar
         glBindVertexArray( avatarVao );
-        glUniform3f( col_uni, 0.7f, 0.3f, 0.3f );
+        glUniform3f( col_uni, colourA[0], colourA[1], colourA[2] );
         int numVerts = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
         glDrawArrays( GL_TRIANGLES, 0, numVerts);
             
@@ -662,6 +711,13 @@ bool A1::keyInputEvent(int key, int action, int mods) {
         if (key == GLFW_KEY_Q) {
             // cout << "Q key pressed" << endl;
             glfwSetWindowShouldClose(m_window, GL_TRUE);
+        }
+
+        if (key == GLFW_KEY_D) {
+            m->digMaze();
+            findStartPoint();        
+            initCubes();
+            initAvatar();
         }
 
         if (key == GLFW_KEY_R) {
