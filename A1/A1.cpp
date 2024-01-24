@@ -22,18 +22,8 @@ const float PI = 3.14159265f;
 //----------------------------------------------------------------------------------------
 // Constructor
 A1::A1()
-        : current_col( 0 )
+        : current_col( 0 ), last_col( -1 ), mouseButtonActive(false)
 {
-    widgetColourF[0] = 0.5f;
-    widgetColourF[1] = 0.5f;
-    widgetColourF[2] = 0.5f;
-
-    widgetColourW[0] = 0.3f;
-    widgetColourW[1] = 0.3f;
-    widgetColourW[2] = 0.7f;
-    widgetColourA[0] = 0.7f;
-    widgetColourA[1] = 0.3f;
-    widgetColourA[2] = 0.3f;
 
     colourF[0] = 0.5f;
     colourF[1] = 0.5f;
@@ -42,9 +32,14 @@ A1::A1()
     colourW[1] = 0.3f;
     colourW[2] = 0.7f;
     colourA[0] = 0.7f;
-    colourA[1] = 0.30f;
+    colourA[1] = 0.3f;
     colourA[2] = 0.3f;
 
+    widgetColour[0] = 0.5f;
+    widgetColour[1] = 0.5f;
+    widgetColour[2] = 0.5f;
+
+    
     avatarPos[0] = 0.0f;
     avatarPos[1] = 0.0f;
     avatarPos[2] = 0.0f;
@@ -148,7 +143,7 @@ void A1::initFloor() {
     GLuint posAttrib = m_shader.getAttribLocation( "position" );
     glEnableVertexAttribArray( posAttrib );
     glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
-                            nullptr);
+                           nullptr);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -306,7 +301,7 @@ void A1::initAvatar() {
     GLuint posAttrib = m_shader.getAttribLocation( "position" );
     glEnableVertexAttribArray( posAttrib );
     glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
-                            nullptr);
+                           nullptr);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -392,7 +387,7 @@ void A1::initCubes() {
     GLuint posAttrib = m_shader.getAttribLocation( "position" );
     glEnableVertexAttribArray( posAttrib );
     glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3),
-                            nullptr);
+                           nullptr);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -434,7 +429,7 @@ void A1::initGrid()
     glGenBuffers( 1, &m_grid_vbo );
     glBindBuffer( GL_ARRAY_BUFFER, m_grid_vbo );
     glBufferData( GL_ARRAY_BUFFER, sz*sizeof(float),
-        verts, GL_STATIC_DRAW );
+                  verts, GL_STATIC_DRAW );
 
     // Specify the means of extracting the position values properly.
     GLint posAttrib = m_shader.getAttribLocation( "position" );
@@ -463,12 +458,35 @@ void A1::appLogic()
     // Place per frame, application logic here ...
 
     cubeHeight = clamp(cubeHeight, 1.0f, 3.0f);
+    scaleSize = clamp (scaleSize, 0.5f, 3.0f);
     
 }
 
 // TODO: Implement this function
 void A1::resetGridStates() {
-
+    colourF[0] = 0.5f;
+    colourF[1] = 0.5f;
+    colourF[2] = 0.5f;
+    colourW[0] = 0.3f;
+    colourW[1] = 0.3f;
+    colourW[2] = 0.7f;
+    colourA[0] = 0.7f;
+    colourA[1] = 0.3f;
+    colourA[2] = 0.3f;
+    current_col = 0;
+    last_col = -1;        
+    avatarPos[0] = 0.0f;
+    avatarPos[1] = 0.0f;
+    avatarPos[2] = 0.0f;
+    m->reset();    
+    mouseButtonActive = false;
+    initGrid();
+    initFloor();
+    initCubes();
+    initAvatar();
+    rotation = 0.0f;
+    scaleSize = 1.0f;
+        
 }
 
 //----------------------------------------------------------------------------------------
@@ -489,72 +507,93 @@ void A1::guiLogic()
     float opacity(0.5f);
 
     ImGui::Begin("Debug Window", &showDebugWindow, ImVec2(100,100), opacity, windowFlags);
-        if( ImGui::Button( "Quit Application" ) ) {
-            glfwSetWindowShouldClose(m_window, GL_TRUE);
+    if( ImGui::Button( "Quit Application" ) ) {
+        glfwSetWindowShouldClose(m_window, GL_TRUE);
+    }
+
+    if( ImGui::Button( "Dig" ) ) {
+        m->digMaze();
+        findStartPoint();        
+        initCubes();
+        initAvatar();
+    }
+
+    if ( ImGui::Button( "Reset" ) ) {
+        resetGridStates();
+    }
+
+    // Eventually you'll create multiple colour widgets with
+    // radio buttons.  If you use PushID/PopID to give them all
+    // unique IDs, then ImGui will be able to keep them separate.
+    // This is unnecessary with a single colour selector and
+    // radio button, but I'm leaving it in as an example.
+
+    // Prefixing a widget name with "##" keeps it from being
+    // displayed.
+
+    ImGui::PushID( "radio" );
+    ImGui::RadioButton( "Floor##Col", &current_col, 0 );
+    ImGui::SameLine();
+    ImGui::RadioButton( "Wall##Col", &current_col, 1 );
+    ImGui::SameLine();
+    ImGui::RadioButton( "Avatar##Col", &current_col, 2);
+    ImGui::PopID();
+    
+    if (current_col != last_col) {
+        if (current_col == 0) {
+            widgetColour[0] = colourF[0];
+            widgetColour[1] = colourF[1];
+            widgetColour[2] = colourF[2];
         }
 
-        if ( ImGui::Button( "Reset" ) ) {
-            resetGridStates();
+        if (current_col == 1) {
+            widgetColour[0] = colourW[0];
+            widgetColour[1] = colourW[1];
+            widgetColour[2] = colourW[2];
         }
 
-        // Eventually you'll create multiple colour widgets with
-        // radio buttons.  If you use PushID/PopID to give them all
-        // unique IDs, then ImGui will be able to keep them separate.
-        // This is unnecessary with a single colour selector and
-        // radio button, but I'm leaving it in as an example.
-
-        // Prefixing a widget name with "##" keeps it from being
-        // displayed.
-
-        ImGui::PushID( 0 );
-        ImGui::ColorEdit3( "##Colour", widgetColourF );
-        ImGui::SameLine();
-        if( ImGui::RadioButton( "Floor colour##Col", &current_col, 0 ) ) {
-            // Select this colour.
-            colourF[0] = widgetColourF[0];
-            colourF[1] = widgetColourF[1];
-            colourF[2] = widgetColourF[2];
-            
+        if (current_col == 2) {
+            widgetColour[0] = colourA[0];
+            widgetColour[1] = colourA[1];
+            widgetColour[2] = colourA[2];
         }
-        ImGui::PopID();
+    }    
+    
+    ImGui::PushID( 0 );
+    ImGui::ColorEdit3( "##Colour", widgetColour );
+    ImGui::PopID();
+    
+    if (current_col == 0) {
+        colourF[0] = widgetColour[0];
+        colourF[1] = widgetColour[1];
+        colourF[2] = widgetColour[2];
+    }
 
-        ImGui::PushID( 1 );
-        ImGui::ColorEdit3( "##Colour", widgetColourW );
-        ImGui::SameLine();                
-        if( ImGui::RadioButton( "Wall colour##Col", &current_col, 1 ) ) {
-            // Select this colour.
-            colourW[0] = widgetColourW[0];
-            colourW[1] = widgetColourW[1];
-            colourW[2] = widgetColourW[2];
+    if (current_col == 1) {
+        colourW[0] = widgetColour[0];
+        colourW[1] = widgetColour[1];
+        colourW[2] = widgetColour[2];
+    }
 
-        }
-        ImGui::PopID();
-        
-        ImGui::PushID( 2 );
-        ImGui::ColorEdit3( "##Colour", widgetColourA );
-        ImGui::SameLine();
-        if( ImGui::RadioButton( "Avatar colour##Col", &current_col, 2 ) ) {
-            // Select this colour.
-            colourA[0] = widgetColourA[0];
-            colourA[1] = widgetColourA[1];
-            colourA[2] = widgetColourA[2];
-
-        }
-        ImGui::PopID();
-
-        
+    if (current_col == 2) {
+        colourA[0] = widgetColour[0];
+        colourA[1] = widgetColour[1];
+        colourA[2] = widgetColour[2];
+    }
+    
+    last_col = current_col;
 
 /*
-        // For convenience, you can uncomment this to show ImGui's massive
-        // demonstration window right in your application.  Very handy for
-        // browsing around to get the widget you want.  Then look in 
-        // shared/imgui/imgui_demo.cpp to see how it's done.
-        if( ImGui::Button( "Test Window" ) ) {
-            showTestWindow = !showTestWindow;
-        }
+// For convenience, you can uncomment this to show ImGui's massive
+// demonstration window right in your application.  Very handy for
+// browsing around to get the widget you want.  Then look in 
+// shared/imgui/imgui_demo.cpp to see how it's done.
+if( ImGui::Button( "Test Window" ) ) {
+showTestWindow = !showTestWindow;
+}
 */
 
-        ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
+    ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
     ImGui::End();
 
@@ -572,39 +611,40 @@ void A1::draw()
     vec3 axis(0.0f, 1.0f, 0.0f);
     // Create a global transformation for the model (centre it).
     mat4 W;
-    W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
     W = glm::rotate(W, rotation, axis);
-
+    W = glm::scale(W, vec3(scaleSize));
+    W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
+    
     
     m_shader.enable();
-        glEnable( GL_DEPTH_TEST );
+    glEnable( GL_DEPTH_TEST );
 
-        glUniformMatrix4fv( P_uni, 1, GL_FALSE, value_ptr( proj ) );
-        glUniformMatrix4fv( V_uni, 1, GL_FALSE, value_ptr( view ) );
-        glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+    glUniformMatrix4fv( P_uni, 1, GL_FALSE, value_ptr( proj ) );
+    glUniformMatrix4fv( V_uni, 1, GL_FALSE, value_ptr( view ) );
+    glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
         
-        // Just draw the grid for now.
-        glBindVertexArray( m_grid_vao );
-        glUniform3f( col_uni, 1, 1, 1 );
-        glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
+    // Just draw the grid for now.
+    glBindVertexArray( m_grid_vao );
+    glUniform3f( col_uni, 1, 1, 1 );
+    glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
 
-        // Draw the floor
-        glBindVertexArray( floorVao );
-        glUniform3f( col_uni, colourF[0], colourF[1], colourF[2] );
-        glDrawArrays( GL_TRIANGLES, 0, 6 );
+    // Draw the floor
+    glBindVertexArray( floorVao );
+    glUniform3f( col_uni, colourF[0], colourF[1], colourF[2] );
+    glDrawArrays( GL_TRIANGLES, 0, 6 );
 
-        // Draw the cubes
-        glBindVertexArray( cubesVao );
-        glUniform3f( col_uni, colourW[0], colourW[1], colourW[2] );
-        glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6);
+    // Draw the cubes
+    glBindVertexArray( cubesVao );
+    glUniform3f( col_uni, colourW[0], colourW[1], colourW[2] );
+    glDrawArrays( GL_TRIANGLES, 0, cubeCount * 6 * 6);
 
-        // Draw Avatar
-        glBindVertexArray( avatarVao );
-        glUniform3f( col_uni, colourA[0], colourA[1], colourA[2] );
-        int numVerts = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
-        glDrawArrays( GL_TRIANGLES, 0, numVerts);
+    // Draw Avatar
+    glBindVertexArray( avatarVao );
+    glUniform3f( col_uni, colourA[0], colourA[1], colourA[2] );
+    int numVerts = 6 * sectorCount * (stackCount - 2) + 3 * sectorCount * 2;
+    glDrawArrays( GL_TRIANGLES, 0, numVerts);
             
-        // Highlight the active square.
+    // Highlight the active square.
     m_shader.disable();
 
     // Restore defaults
@@ -625,8 +665,8 @@ void A1::cleanup()
  * Event handler.  Handles cursor entering the window area events.
  */
 bool A1::cursorEnterWindowEvent (
-        int entered
-) {
+    int entered
+                                 ) {
     bool eventHandled(false);
 
     // Fill in with event handling code...
@@ -648,7 +688,13 @@ bool A1::mouseMoveEvent(double xPos, double yPos)
         // Probably need some instance variables to track the current
         // rotation amount, and maybe the previous X position (so 
         // that you can rotate relative to the *change* in X.
+        deltaX = (xPos - xPrev);
+        if (mouseButtonActive) {
+            rotation += deltaX / 2000;
+        }
     }
+
+    xPrev = xPos;
 
     return eventHandled;
 }
@@ -660,11 +706,19 @@ bool A1::mouseMoveEvent(double xPos, double yPos)
 bool A1::mouseButtonInputEvent(int button, int actions, int mods) {
     bool eventHandled(false);
 
-    if (!ImGui::IsMouseHoveringAnyWindow()) {
-        // The user clicked in the window.  If it's the left
-        // mouse button, initiate a rotation.
+    if (actions == GLFW_PRESS) {
+        if (!ImGui::IsMouseHoveringAnyWindow()) {
+            // The user clicked in the window.  If it's the left
+            // mouse button, initiate a rotation.
+            mouseButtonActive = true;
+            
+        }
     }
 
+    if (actions == GLFW_RELEASE) {
+        mouseButtonActive = false;
+    }
+    
     return eventHandled;
 }
 
@@ -676,7 +730,12 @@ bool A1::mouseScrollEvent(double xOffSet, double yOffSet) {
     bool eventHandled(false);
 
     // Zoom in or out.
-
+    if (yOffSet == -1) {
+        scaleSize -= 0.1f;
+    } else if (yOffSet == 1) {
+        scaleSize += 0.1f;
+    }
+    
     return eventHandled;
 }
 

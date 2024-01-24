@@ -60,17 +60,20 @@ private:
     glm::mat4 view;
 
     Maze *m;
-    float rotation = 0;
-    float widgetColourF[3];
-    float widgetColourW[3];
-    float widgetColourA[3];
+    float deltaX = 0.0f;
+    float rotation = 0.0f;
+    float scaleSize = 1.0f;
+    float widgetColour[3];
     float colourF[3];
     float colourW[3];
     float colourA[3];
+    float xPrev;
+    int last_col;
     int current_col;
     int cubeCount;        
     int sectorCount = 20;
     int stackCount = 20;
     float cubeHeight;
     int  avatarPos[3];
+    bool mouseButtonActive;
 };
