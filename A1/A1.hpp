@@ -62,6 +62,7 @@ private:
     Maze *m;
     float deltaX = 0.0f;
     float rotation = 0.0f;
+    float persistence = 0.0f;
     float scaleSize = 1.0f;
     float widgetColour[3];
     float colourF[3];

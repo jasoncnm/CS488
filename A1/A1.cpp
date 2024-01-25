@@ -457,7 +457,9 @@ void A1::appLogic()
 {
     // Place per frame, application logic here ...
 
-    cubeHeight = clamp(cubeHeight, 1.0f, 3.0f);
+    if (!mouseButtonActive) rotation += persistence;
+
+    cubeHeight = clamp(cubeHeight, 0.0f, 2.8f);
     scaleSize = clamp (scaleSize, 0.5f, 3.0f);
     
 }
@@ -486,7 +488,7 @@ void A1::resetGridStates() {
     initAvatar();
     rotation = 0.0f;
     scaleSize = 1.0f;
-        
+    persistence = 0.0f;
 }
 
 //----------------------------------------------------------------------------------------
@@ -691,6 +693,7 @@ bool A1::mouseMoveEvent(double xPos, double yPos)
         deltaX = (xPos - xPrev);
         if (mouseButtonActive) {
             rotation += deltaX / 2000;
+            persistence = deltaX / 2000;
         }
     }
 
@@ -711,6 +714,7 @@ bool A1::mouseButtonInputEvent(int button, int actions, int mods) {
             // The user clicked in the window.  If it's the left
             // mouse button, initiate a rotation.
             mouseButtonActive = true;
+            persistence = 0.0f;
             
         }
     }
