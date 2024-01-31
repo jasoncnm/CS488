@@ -10,6 +10,8 @@
 
 #include <vector>
 
+typedef unsigned int u32;
+
 // Set a global maximum number of vertices in order to pre-allocate VBO data
 // in one shot, rather than reallocating each frame.
 const GLsizei kMaxVertices = 1000;
@@ -27,6 +29,10 @@ public:
     GLsizei numVertices;
 };
 
+struct LineIndex {
+    u32 left;
+    u32 right;
+};
 
 class A2 : public CS488Window {
 public:
@@ -54,6 +60,7 @@ protected:
     void uploadVertexDataToVbos();
 
     void initLineData();
+    void OrthDraw();
 
     void setLineColour(const glm::vec3 & colour);
 
@@ -72,5 +79,6 @@ protected:
 
     glm::vec3 m_currentLineColour;
     glm::vec3 cube[8];
-    glm::vec2 cubeLines[12];
+    LineIndex cubeLines[12];
+    int windowW, windowH;
 };

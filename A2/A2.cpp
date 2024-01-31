@@ -24,6 +24,13 @@ VertexData::VertexData()
 }
 
 
+LineIndex l(u32 left, u32 right) {
+    LineIndex result;
+    result.left = left;
+    result.right = right;
+    return result;
+}
+
 //----------------------------------------------------------------------------------------
 // Constructor
 A2::A2() : m_currentLineColour(vec3(0.0f))
@@ -37,18 +44,18 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cube[6] = vec3(-1,  1,  1);
     cube[7] = vec3( 1,  1,  1);
 
-    cubeLines[0] = vec2(0, 1);
-    cubeLines[1] = vec2(1, 5);
-    cubeLines[2] = vec2(5, 3);
-    cubeLines[3] = vec2(3, 0);
-    cubeLines[4] = vec2(0, 2);
-    cubeLines[5] = vec2(1, 4);
-    cubeLines[6] = vec2(5, 7);
-    cubeLines[7] = vec2(3, 6);
-    cubeLines[8] = vec2(2, 4);
-    cubeLines[9] = vec2(4, 7);
-    cubeLines[10] = vec2(7, 6);
-    cubeLines[11] = vec2(6, 2);
+    cubeLines[0] = l(0, 1);
+    cubeLines[1] = l(1, 5);
+    cubeLines[2] = l(5, 3);
+    cubeLines[3] = l(3, 0);
+    cubeLines[4] = l(0, 2);
+    cubeLines[5] = l(1, 4);
+    cubeLines[6] = l(5, 7);
+    cubeLines[7] = l(3, 6);
+    cubeLines[8] = l(2, 4);
+    cubeLines[9] = l(4, 7);
+    cubeLines[10] = l(7, 6);
+    cubeLines[11] = l(6, 2);
 }
 
 //----------------------------------------------------------------------------------------
@@ -199,6 +206,24 @@ void A2::drawLine(
     m_vertexData.numVertices += 2;
 }
 
+void A2::WindowToViewPort(vec2 &xw, vec2 &yw) {
+    
+}
+
+//----------------------------------------------------------------------------------------
+void A2::OrthDraw() {
+    setLineColour(vec3(1.0f, 0.7f, 0.8f));
+    for( u32 i = 0; i < 12; i++) {
+        LineIndex index = cubeLines[i];
+        vec3 lineLeft = cube[index.left];
+        vec3 lineRight = cube[index.right];
+
+        
+        
+        drawLine(vec2(lineLeft.x, lineLeft.y), vec2(lineRight.x, lineRight.y));
+    }
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -210,6 +235,9 @@ void A2::appLogic()
     // Call at the beginning of frame, before drawing lines:
     initLineData();
 
+    OrthDraw();
+    
+#if 0
     // Draw outer square:
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
     drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
@@ -224,6 +252,7 @@ void A2::appLogic()
     drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
     drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
     drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -383,7 +412,9 @@ bool A2::windowResizeEvent (
     bool eventHandled(false);
 
     // Fill in with event handling code...
-
+    windowW = width;
+    windowH = height;
+    cout << "width " << width << " height " << height << endl;
     return eventHandled;
 }
 
