@@ -1,3 +1,4 @@
+
 // Termm--Fall 2020
 
 #include "A2.hpp"
@@ -12,6 +13,8 @@ using namespace std;
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 using namespace glm;
+
+const float PI = 3.14159265f;
 
 //----------------------------------------------------------------------------------------
 // Constructor
@@ -35,14 +38,14 @@ LineIndex l(u32 left, u32 right) {
 // Constructor
 A2::A2() : m_currentLineColour(vec3(0.0f))
 {
-    cube[0] = vec3(-1, -1, -1);
-    cube[1] = vec3( 1, -1, -1);
-    cube[2] = vec3(-1,  1, -1);
-    cube[3] = vec3(-1, -1,  1);
-    cube[4] = vec3( 1,  1, -1);
-    cube[5] = vec3( 1, -1,  1);
-    cube[6] = vec3(-1,  1,  1);
-    cube[7] = vec3( 1,  1,  1);
+    cube[0] = vec4(-1, -1, -1, 1);
+    cube[1] = vec4( 1, -1, -1, 1);
+    cube[2] = vec4(-1, -1,  1, 1);
+    cube[3] = vec4(-1,  1, -1, 1);
+    cube[4] = vec4( 1, -1,  1, 1);
+    cube[5] = vec4( 1,  1, -1, 1);
+    cube[6] = vec4(-1,  1,  1, 1);
+    cube[7] = vec4( 1,  1,  1, 1);
 
     cubeLines[0] = l(0, 1);
     cubeLines[1] = l(1, 5);
@@ -56,6 +59,10 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[9] = l(4, 7);
     cubeLines[10] = l(7, 6);
     cubeLines[11] = l(6, 2);
+
+    float q = sqrt(2)/2;
+    viewFrame = mat4(vec4(q, q, 0, 0), vec4(0, 0, 1, 0), vec4(q, -q, 0, 0), vec4(1, 0, 3, 1));
+    
 }
 
 //----------------------------------------------------------------------------------------
@@ -176,6 +183,13 @@ void A2::mapVboDataToVertexAttributeLocation()
     CHECK_GL_ERRORS;
 }
 
+void A2::Reset() {
+    mode = Modes::RModel;
+    mTranslateX = mTranslateY = mTranslateZ = 0;
+    mRotateX = mRotateY = mRotateZ = 0;
+    mScaleX = mScaleY = mScaleZ = 250;
+}
+
 //---------------------------------------------------------------------------------------
 void A2::initLineData()
 {
@@ -188,6 +202,77 @@ void A2::setLineColour (
         const glm::vec3 & colour
 ) {
     m_currentLineColour = colour;
+}
+
+//---------------------------------------------------------------------------------------
+void
+PrintMat4( glm::mat4 mat )
+{
+    for( int col = 0; col < 4; col++ )
+    {
+        // transpose the matrix here:
+        fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
+                 mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
+    }
+}
+
+mat4 A2::Translation (
+    mat4 T ,float dx, float dy, float dz
+) {
+    mat4 M(1.);
+    M[3][0] = dx;
+    M[3][1] = dy;
+    M[3][2] = dz;   
+    return M * T;
+}
+
+//---------------------------------------------------------------------------------------
+mat4 A2::Scale (
+    mat4 T, float sx, float sy, float sz
+) {
+    mat4 M(1.);
+    M[0][0] = sx;
+    M[1][1] = sy;
+    M[2][2] = sz;
+    return M * T;
+}
+
+//---------------------------------------------------------------------------------------
+mat4 A2::RotationOnAxis (
+    mat4 T, float theta, Axis axi
+) {
+    mat4 M(1.);
+    switch (axi) {
+        case Axis::X:
+            M[1][1] =  cos(theta);
+            M[2][1] = -sin(theta);
+            M[1][2] =  sin(theta);
+            M[2][2] =  cos(theta);
+            break;
+        case Axis::Z:
+            M[0][0] =  cos(theta);
+            M[0][2] = -sin(theta);
+            M[2][0] =  sin(theta);
+            M[2][2] =  cos(theta);
+            break;
+        case Axis::Y:
+            M[0][0] =  cos(theta);
+            M[1][0] = -sin(theta);
+            M[0][1] =  sin(theta);
+            M[1][1] =  cos(theta);            
+            break;
+        default:
+            break;
+    }
+    return M * T;
+}
+
+mat3x4 A2::OrthographicMode () {
+    mat3x4 M;
+    M[0] = vec4(1,0,0,0);
+    M[1] = vec4(0,1,0,0);
+    M[2] = vec4(0,0,0,1);
+    return M;
 }
 
 //---------------------------------------------------------------------------------------
@@ -206,8 +291,27 @@ void A2::drawLine(
     m_vertexData.numVertices += 2;
 }
 
-void A2::WindowToViewPort(vec2 &xw, vec2 &yw) {
-    
+vec2 A2::WindowToViewPort(vec2 pw) {
+    float Lw = m_windowWidth;
+    float Hw = m_windowHeight;
+    float Lv = 2;
+    float Hv = 2; 
+    float xwl = -0.5f * Lw;
+    float ywl = -0.5f * Hw;
+    float xvl = -0.5f * Lv;
+    float yvl = -0.5f * Hv;
+
+    vec2 result = vec2((Lv / Lw) * (pw[0] - xwl) + xvl, (Hv / Hw) * (pw[1] - ywl) + yvl);
+
+    return result;
+}
+
+float clamp(float val, float low, float high) {
+    float result = val;
+    if (val < low) result = low;
+    else if (val > high) result = high;
+
+    return result;
 }
 
 //----------------------------------------------------------------------------------------
@@ -215,14 +319,25 @@ void A2::OrthDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
     for( u32 i = 0; i < 12; i++) {
         LineIndex index = cubeLines[i];
-        vec3 lineLeft = cube[index.left];
-        vec3 lineRight = cube[index.right];
+        vec4 lineLeft = cube[index.left];
+        vec4 lineRight = cube[index.right];
 
+        mat4 W(1.);
+        W = Scale(W, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
+        W = RotationOnAxis(W, 0.01f * mRotateX, Axis::X);
+        W = RotationOnAxis(W, 0.01f * mRotateY, Axis::Y);
+        W = RotationOnAxis(W, 0.01f * mRotateZ, Axis::Z);
+        W = Translation(W, mTranslateX, mTranslateY, mTranslateZ);
+        vec4 PA = W * lineLeft;
+        vec4 PB = W * lineRight;
         
+        vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
+        vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));
         
-        drawLine(vec2(lineLeft.x, lineLeft.y), vec2(lineRight.x, lineRight.y));
+        drawLine(A, B);
     }
 }
+
 
 //----------------------------------------------------------------------------------------
 /*
@@ -231,6 +346,7 @@ void A2::OrthDraw() {
 void A2::appLogic()
 {
     // Place per frame, application logic here ...
+    
 
     // Call at the beginning of frame, before drawing lines:
     initLineData();
@@ -275,15 +391,23 @@ void A2::guiLogic()
             windowFlags);
 
 
-        // Add more gui elements here here ...
+    // Add more gui elements here here ...
+    ImGui::PushID( "radio" );
+    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel );
+    ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel );
+    ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel );
+    ImGui::PopID();
+    
+    // Create Button, and check if it was clicked:
+    if( ImGui::Button( "Quit Application " ) ) {
+        glfwSetWindowShouldClose(m_window, GL_TRUE);
+    }
 
+    if( ImGui::Button( "Reset            " ) ) {
+        Reset();
+    }
 
-        // Create Button, and check if it was clicked:
-        if( ImGui::Button( "Quit Application" ) ) {
-            glfwSetWindowShouldClose(m_window, GL_TRUE);
-        }
-
-        ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
+    ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
     ImGui::End();
 }
@@ -366,9 +490,37 @@ bool A2::mouseMoveEvent (
     bool eventHandled(false);
 
     // Fill in with event handling code...
+    if (!ImGui::IsMouseHoveringAnyWindow()) {
+        deltaX = mouseButtonActive ? (xPos - xPrev) : 0;
+        // cout << deltaX << endl;
+        // cout << " mTranslateX " << mTranslateX;
 
+        switch (mode) {
+            case Modes::TModel:
+                if (dX) mTranslateX += deltaX;
+                if (dY) mTranslateY += deltaX;
+                if (dZ) mTranslateZ += deltaX;
+                break;
+            case Modes::RModel:
+                if (dX) mRotateX += deltaX;
+                if (dY) mRotateY += deltaX;
+                if (dZ) mRotateZ += deltaX;
+                break;
+            case Modes::SModel:
+                if (dX) mScaleX += deltaX;
+                if (dY) mScaleY += deltaX;
+                if (dZ) mScaleZ += deltaX;
+                break;
+                
+                
+            default:
+                break;
+        }        
+    }
+
+    xPrev = xPos;
     return eventHandled;
-}
+} 
 
 //----------------------------------------------------------------------------------------
 /*
@@ -382,6 +534,28 @@ bool A2::mouseButtonInputEvent (
     bool eventHandled(false);
 
     // Fill in with event handling code...
+    if (actions == GLFW_PRESS) {
+        if (!ImGui::IsMouseHoveringAnyWindow()) {
+            mouseButtonActive = true;
+            switch (button) {
+                case GLFW_MOUSE_BUTTON_LEFT:
+                    dX = true;
+                    break;
+                case GLFW_MOUSE_BUTTON_RIGHT:
+                    dY = true;
+                    break;
+                case GLFW_MOUSE_BUTTON_MIDDLE:
+                    dZ = true;
+                    break;
+            }
+            
+        }
+    }
+
+    if (actions == GLFW_RELEASE) {
+        mouseButtonActive = false;
+        dX = dY = dZ = false;
+    }
 
     return eventHandled;
 }
@@ -411,10 +585,6 @@ bool A2::windowResizeEvent (
 ) {
     bool eventHandled(false);
 
-    // Fill in with event handling code...
-    windowW = width;
-    windowH = height;
-    cout << "width " << width << " height " << height << endl;
     return eventHandled;
 }
 
@@ -430,6 +600,22 @@ bool A2::keyInputEvent (
     bool eventHandled(false);
 
     // Fill in with event handling code...
-
+    switch (key) {
+        case GLFW_KEY_Q:
+            glfwSetWindowShouldClose(m_window, GL_TRUE);
+            break;
+        case GLFW_KEY_R:
+            mode = Modes::RModel;
+            break;
+        case GLFW_KEY_T:
+            mode = Modes::TModel;
+            break;
+        case GLFW_KEY_S:
+            mode = Modes::SModel;
+            break;
+        case GLFW_KEY_A:
+            Reset();
+            break;
+    }
     return eventHandled;
 }

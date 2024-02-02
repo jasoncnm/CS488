@@ -16,6 +16,13 @@ typedef unsigned int u32;
 // in one shot, rather than reallocating each frame.
 const GLsizei kMaxVertices = 1000;
 
+enum Axis {
+    X, Y, Z
+};
+
+enum Modes {
+    RView, TView, Perspective, RModel, TModel, SModel, Viewport, num_modes
+};
 
 // Convenience class for storing vertex data in CPU memory.
 // Data should be copied over to GPU memory via VBO storage before rendering.
@@ -61,9 +68,14 @@ protected:
 
     void initLineData();
     void OrthDraw();
-
+    void Reset();
+    glm::vec2   WindowToViewPort(glm::vec2 pw);
+    glm::mat4   Translation(glm::mat4 T, float dx, float dy, float dz);
+    glm::mat4   Scale (glm::mat4 T, float sx, float sy, float sz);
+    glm::mat4   RotationOnAxis(glm::mat4 T, float theta, Axis ax);
+    glm::mat3x4 OrthographicMode();
+    
     void setLineColour(const glm::vec3 & colour);
-
     void drawLine (
             const glm::vec2 & v0,
             const glm::vec2 & v1
@@ -77,8 +89,19 @@ protected:
 
     VertexData m_vertexData;
 
+    glm::mat4 viewFrame;
     glm::vec3 m_currentLineColour;
-    glm::vec3 cube[8];
+    glm::vec4 cube[8];
     LineIndex cubeLines[12];
-    int windowW, windowH;
+    bool mouseButtonActive = false;
+    bool dX, dY, dZ;
+    float mTranslateX, mTranslateY, mTranslateZ;
+    float mRotateX, mRotateY, mRotateZ;
+    float mScaleX = 250, mScaleY = 250, mScaleZ = 250;
+    float vTranslateX, vTranslateY, vTranslateZ;
+    float deltaX;
+    float xPrev;
+    Modes mode = Modes::RModel;
+    
 };
+
