@@ -90,6 +90,7 @@ protected:
     VertexData m_vertexData;
 
     glm::mat4 viewFrame;
+    glm::mat4 modelFrame;
     glm::vec3 m_currentLineColour;
     glm::vec4 cube[8];
     LineIndex cubeLines[12];

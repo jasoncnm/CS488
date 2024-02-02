@@ -60,9 +60,8 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[10] = l(7, 6);
     cubeLines[11] = l(6, 2);
 
-    float q = sqrt(2)/2;
-    viewFrame = mat4(vec4(q, q, 0, 0), vec4(0, 0, 1, 0), vec4(q, -q, 0, 0), vec4(1, 0, 3, 1));
-    
+    viewFrame = mat4(1.);
+    modelFrame = mat4(1.);    
 }
 
 //----------------------------------------------------------------------------------------
@@ -317,25 +316,50 @@ float clamp(float val, float low, float high) {
 //----------------------------------------------------------------------------------------
 void A2::OrthDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
+    mat4 W(1.);
+#if 1
+    modelFrame = Scale(modelFrame, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
+    /*
+    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateX, Axis::X);
+    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateY, Axis::Y);
+    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateZ, Axis::Z);
+    modelFrame = Translation(modelFrame, mTranslateX, mTranslateY, mTranslateZ);
+    */  
+#else
+    W = Scale(W, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
+    W = RotationOnAxis(W, 0.01f * mRotateX, Axis::X);
+    W = RotationOnAxis(W, 0.01f * mRotateY, Axis::Y);
+    W = RotationOnAxis(W, 0.01f * mRotateZ, Axis::Z);
+    W = Translation(W, mTranslateX, mTranslateY, mTranslateZ);
+        
+#endif
+    cout << "--------------------------------------------------" << endl;
+    cout << "W:" << endl;
+    PrintMat4(W);
+    cout << "--------------------------------------------------" << endl;
+    cout << "modelFrame:" << endl;
+    PrintMat4(modelFrame);
+
+    
     for( u32 i = 0; i < 12; i++) {
         LineIndex index = cubeLines[i];
         vec4 lineLeft = cube[index.left];
         vec4 lineRight = cube[index.right];
-
-        mat4 W(1.);
-        W = Scale(W, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
-        W = RotationOnAxis(W, 0.01f * mRotateX, Axis::X);
-        W = RotationOnAxis(W, 0.01f * mRotateY, Axis::Y);
-        W = RotationOnAxis(W, 0.01f * mRotateZ, Axis::Z);
-        W = Translation(W, mTranslateX, mTranslateY, mTranslateZ);
+#if 1 
+        vec4 PA = modelFrame * lineLeft;
+        vec4 PB = modelFrame * lineRight;
+#else
         vec4 PA = W * lineLeft;
         vec4 PB = W * lineRight;
-        
+#endif        
         vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
         vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));
         
         drawLine(A, B);
-    }
+    } // for
+#if 1
+    mScaleX = mScaleY = mScaleZ = 2;
+#endif
 }
 
 
