@@ -68,6 +68,7 @@ protected:
 
     void initLineData();
     void OrthDraw();
+    void InitView();
     void Reset();
     glm::vec2   WindowToViewPort(glm::vec2 pw);
     glm::mat4   Translation(float dx, float dy, float dz);
@@ -93,7 +94,7 @@ protected:
     glm::mat4 modelTransfrom;
     
     glm::mat4 view;
-    glm::mat4 viewTransorm;
+    glm::mat4 viewTransfrom;
     
     glm::vec3 m_currentLineColour;
     glm::vec4 cube[8];

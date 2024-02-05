@@ -1,4 +1,5 @@
 
+
 // Termm--Fall 2020
 
 #include "A2.hpp"
@@ -15,6 +16,18 @@ using namespace std;
 using namespace glm;
 
 const float PI = 3.14159265f;
+
+//---------------------------------------------------------------------------------------
+void
+PrintMat4( glm::mat4 mat )
+{
+    for( int col = 0; col < 4; col++ )
+    {
+        // transpose the matrix here:
+        fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
+                 mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
+    }
+}
 
 //----------------------------------------------------------------------------------------
 // Constructor
@@ -61,7 +74,8 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[11] = l(6, 2);
 
     view = mat4(1.);
-    view[3].z = -10.f;
+    viewTransfrom = mat4(1.);
+
     model = mat4(1.);
     modelTransfrom = mat4(1.);
         
@@ -92,7 +106,25 @@ void A2::init()
     generateVertexBuffers();
 
     mapVboDataToVertexAttributeLocation();
-        
+
+    // TODO: initialze view matrix
+    InitView();    
+}
+
+void A2::InitView() {
+    vec3 lookFrom(0, 0, -1);
+    vec3 lookAt(0, 0, 0);
+    vec3 up(0, 1, -1);
+    mat4 T = Translation(-lookFrom.x, -lookFrom.y, -lookFrom.z);
+    vec3 vz = lookAt - lookFrom;
+    vec3 vx = cross(up, vz);
+    vx = vx / dot(vx, vx);
+    vec3 vy = cross(vz, vx);
+    mat4 R(vec4(vx.x, vy.x, vz.x, 0),
+           vec4(vx.y, vy.y, vz.y, 0),
+           vec4(vx.z, vy.z, vz.z, 0),
+           vec4(0,0,0,1));
+    view = R * T;
 }
 
 //----------------------------------------------------------------------------------------
@@ -203,18 +235,6 @@ void A2::setLineColour (
     m_currentLineColour = colour;
 }
 
-//---------------------------------------------------------------------------------------
-void
-PrintMat4( glm::mat4 mat )
-{
-    for( int col = 0; col < 4; col++ )
-    {
-        // transpose the matrix here:
-        fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
-                 mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
-    }
-}
-
 mat4 A2::Translation (
     float dx, float dy, float dz
 ) {
@@ -314,8 +334,8 @@ void A2::OrthDraw() {
         vec4 lineLeft = cube[index.left];
         vec4 lineRight = cube[index.right];
         
-        vec4 PA = modelTransfrom * model * modelScale * lineLeft;
-        vec4 PB = modelTransfrom * model * modelScale * lineRight;
+        vec4 PA = viewTransfrom * view * modelTransfrom * model * modelScale * lineLeft;
+        vec4 PB = viewTransfrom * view * modelTransfrom * model * modelScale * lineRight;
         
         vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
         vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
@@ -323,12 +343,12 @@ void A2::OrthDraw() {
     } // for
 
     mat4 modelFrameScale = Scale(250, 250, 250);
-    
-    // TODO: Not quite right yet
-    vec4 Origin = modelTransfrom * model * modelFrameScale * model[3];
-    vec4 axisX = modelTransfrom * model * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
-    vec4 axisY = modelTransfrom * model * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
-    vec4 axisZ = modelTransfrom * model * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+
+    // NOTE: draw model gnorm
+    vec4 Origin = viewTransfrom * view * modelTransfrom * model * modelFrameScale * model[3];
+    vec4 axisX = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
+    vec4 axisY = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
+    vec4 axisZ = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
     
     // NOTE: Model X axis
     setLineColour(vec3(1.0f, 0, 0));
@@ -384,6 +404,8 @@ void A2::guiLogic()
 
     // Add more gui elements here here ...
     ImGui::PushID( "radio" );
+    ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView  );
+    ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView  );
     ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel );
     ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel );
     ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel );
@@ -487,9 +509,6 @@ bool A2::mouseMoveEvent (
         // cout << " mTranslateX " << mTranslateX;
 
         switch (mode) {
-
-#if 1
-
             case Modes::TModel:
                 if (dX) mTranslateX += deltaX;
                 if (dY) mTranslateY += deltaX;
@@ -521,25 +540,29 @@ bool A2::mouseMoveEvent (
                 if (dX) mScaleX += deltaX;
                 if (dY) mScaleY += deltaX;
                 if (dZ) mScaleZ += deltaX;
-#else
-            case Modes::TModel:
+                break;
+
+            case Modes::TView:
                 if (dX) mTranslateX += deltaX;
                 if (dY) mTranslateY += deltaX;
                 if (dZ) mTranslateZ += deltaX;
+                if (mouseButtonActive) {
+                    viewTransfrom *= Translation(-mTranslateX, -mTranslateY, -mTranslateZ);
+                }
+                mTranslateX = mTranslateY = mTranslateZ = 0;
                 break;
-            case Modes::RModel:
+                
+            case Modes::RView:
                 if (dX) mRotateX += deltaX;
                 if (dY) mRotateY += deltaX;
                 if (dZ) mRotateZ += deltaX;
+                if (dX || dY || dZ) {
+                    viewTransfrom *= RotationOnAxis( mRotateX, Axis::X);
+                    viewTransfrom *= RotationOnAxis( mRotateY, Axis::Y);
+                    viewTransfrom *= RotationOnAxis( mRotateZ, Axis::Z);   
+                }
+                mRotateX = mRotateY = mRotateZ = 0;                
                 break;
-            case Modes::SModel:
-                // if (deltaX < 2) deltaX = 2;
-                if (dX) mScaleX += deltaX;
-                if (dY) mScaleY += deltaX;
-                if (dZ) mScaleZ += deltaX;
-#endif
-                break;
-                
                 
             default:
                 break;
