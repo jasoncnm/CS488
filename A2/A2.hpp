@@ -68,9 +68,10 @@ protected:
 
     void initLineData();
     void OrthDraw();
-    void InitView();
     void Reset();
+    void clip(glm::vec4 left, glm::vec4 right);
     glm::vec2   WindowToViewPort(glm::vec2 pw);
+    glm::mat4   viewMatrix();
     glm::mat4   Translation(float dx, float dy, float dz);
     glm::mat4   Scale (float sx, float sy, float sz);
     glm::mat4   RotationOnAxis(float theta, Axis axi);
@@ -91,13 +92,15 @@ protected:
     VertexData m_vertexData;
 
     glm::mat4 model;
-    glm::mat4 modelTransfrom;
+    glm::mat4 modelTransform;
     
     glm::mat4 view;
-    glm::mat4 viewTransfrom;
+    glm::mat4 viewTransform;
+    glm::vec4 lookFrom, lookAt, up;
     
     glm::vec3 m_currentLineColour;
     glm::vec4 cube[8];
+    
     
     LineIndex cubeLines[12];
     bool mouseButtonActive = false;
@@ -105,7 +108,6 @@ protected:
     float mTranslateX, mTranslateY, mTranslateZ;
     float mRotateX, mRotateY, mRotateZ;
     float mScaleX = 250, mScaleY = 250, mScaleZ = 250;
-    float vTranslateX, vTranslateY, vTranslateZ;
     float deltaX;
     float xPrev;
     Modes mode = Modes::RModel;

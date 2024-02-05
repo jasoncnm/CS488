@@ -1,5 +1,6 @@
 
 
+
 // Termm--Fall 2020
 
 #include "A2.hpp"
@@ -16,6 +17,7 @@ using namespace std;
 using namespace glm;
 
 const float PI = 3.14159265f;
+bool firstRun = true;
 
 //---------------------------------------------------------------------------------------
 void
@@ -73,11 +75,13 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[10] = l(7, 6);
     cubeLines[11] = l(6, 2);
 
-    view = mat4(1.);
-    viewTransfrom = mat4(1.);
-
+    view = mat4(vec4(1, 0, 0, 0),
+                vec4(0, 1, 0, 0),
+                vec4(0, 0, 1, 0),
+                vec4(0, 0, -1, 1));
+    
     model = mat4(1.);
-    modelTransfrom = mat4(1.);
+    modelTransform = mat4(1.);
         
 }
 
@@ -107,24 +111,21 @@ void A2::init()
 
     mapVboDataToVertexAttributeLocation();
 
-    // TODO: initialze view matrix
-    InitView();    
+    view = viewMatrix();
 }
 
-void A2::InitView() {
-    vec3 lookFrom(0, 0, -1);
-    vec3 lookAt(0, 0, 0);
-    vec3 up(0, 1, -1);
-    mat4 T = Translation(-lookFrom.x, -lookFrom.y, -lookFrom.z);
+mat4 A2::viewMatrix() {
+    vec3 lookFrom(0,0,1);
+    vec3 lookAt(0,0,0);
+    vec3 up(0,1,0);
     vec3 vz = lookAt - lookFrom;
+    vz = vz / (vz.x * vz.x + vz.y * vz.y + vz.z * vz.z);
     vec3 vx = cross(up, vz);
-    vx = vx / dot(vx, vx);
+    vx = vx / (vx.x * vx.x + vx.y * vx.y + vx.z * vx.z);
     vec3 vy = cross(vz, vx);
-    mat4 R(vec4(vx.x, vy.x, vz.x, 0),
-           vec4(vx.y, vy.y, vz.y, 0),
-           vec4(vx.z, vy.z, vz.z, 0),
-           vec4(0,0,0,1));
-    view = R * T;
+    mat4 V(vec4(vx, 0), vec4(vy, 0), vec4(vz, 0), vec4(lookFrom, 1));
+    PrintMat4(V);
+    return V;
 }
 
 //----------------------------------------------------------------------------------------
@@ -301,6 +302,10 @@ void A2::drawLine(
     m_vertexData.numVertices += 2;
 }
 
+void A2::clip(vec4 left, vec4 right) {
+    
+}
+
 vec2 A2::WindowToViewPort(vec2 pw) {
     float Lw = m_windowWidth;
     float Hw = m_windowHeight;
@@ -316,14 +321,6 @@ vec2 A2::WindowToViewPort(vec2 pw) {
     return result;
 }
 
-float clamp(float val, float low, float high) {
-    float result = val;
-    if (val < low) result = low;
-    else if (val > high) result = high;
-
-    return result;
-}
-
 //----------------------------------------------------------------------------------------
 void A2::OrthDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
@@ -334,8 +331,8 @@ void A2::OrthDraw() {
         vec4 lineLeft = cube[index.left];
         vec4 lineRight = cube[index.right];
         
-        vec4 PA = viewTransfrom * view * modelTransfrom * model * modelScale * lineLeft;
-        vec4 PB = viewTransfrom * view * modelTransfrom * model * modelScale * lineRight;
+        vec4 PA = view * modelTransform * modelScale * lineLeft;
+        vec4 PB = view * modelTransform * modelScale * lineRight;
         
         vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
         vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
@@ -345,10 +342,10 @@ void A2::OrthDraw() {
     mat4 modelFrameScale = Scale(250, 250, 250);
 
     // NOTE: draw model gnorm
-    vec4 Origin = viewTransfrom * view * modelTransfrom * model * modelFrameScale * model[3];
-    vec4 axisX = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
-    vec4 axisY = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
-    vec4 axisZ = viewTransfrom * view * modelTransfrom * model * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+    vec4 Origin =  view * modelTransform * modelFrameScale * model[3];
+    vec4 axisX  =  view * modelTransform * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
+    vec4 axisY  =  view * modelTransform * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
+    vec4 axisZ  =  view * modelTransform * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
     
     // NOTE: Model X axis
     setLineColour(vec3(1.0f, 0, 0));
@@ -365,6 +362,29 @@ void A2::OrthDraw() {
     setLineColour(vec3(0, 0, 1.0f));
     vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
     drawLine(A, D);
+
+    // NOTE: world gnorm
+    Origin = view * vec4(0,0,0,1);
+    axisX =  view * modelFrameScale * vec4(1, 0, 0, 1);
+    axisY =  view * modelFrameScale * vec4(0, 1, 0, 1);
+    axisZ =  view * modelFrameScale * vec4(0, 0, 1, 1);
+    
+    // NOTE: World X axis
+    setLineColour(vec3(.2f, .3f, .7f));
+    A = WindowToViewPort(vec2(Origin.x, Origin.y));
+    B = WindowToViewPort(vec2(axisX.x, axisX.y));
+    drawLine(A, B);
+
+    // NOTE: World Y axis
+    setLineColour(vec3(.3f, .2f, .7f));
+    C = WindowToViewPort(vec2(axisY.x, axisY.y));
+    drawLine(A, C);
+
+    // NOTE: World Z axis
+    setLineColour(vec3(.7f, .2f, .3f));
+    D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+    drawLine(A, D);
+    
     
 }
 
@@ -376,6 +396,10 @@ void A2::OrthDraw() {
 void A2::appLogic()
 {
     // Place per frame, application logic here ...
+    if (firstRun) {
+        ImGui::SetNextWindowPos(ImVec2(50,50));
+        firstRun = false;
+    }
     
     // Call at the beginning of frame, before drawing lines:
     initLineData();
@@ -514,7 +538,7 @@ bool A2::mouseMoveEvent (
                 if (dY) mTranslateY += deltaX;
                 if (dZ) mTranslateZ += deltaX;
                 if (mouseButtonActive) {
-                    modelTransfrom *= Translation(mTranslateX, mTranslateY, mTranslateZ);
+                    modelTransform *= Translation(mTranslateX, mTranslateY, mTranslateZ);
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
                 break;
@@ -524,14 +548,10 @@ bool A2::mouseMoveEvent (
                 if (dY) mRotateY += deltaX;
                 if (dZ) mRotateZ += deltaX;
                 if (dX || dY || dZ) {
-                    modelTransfrom *= RotationOnAxis( mRotateX, Axis::X);
-                    modelTransfrom *= RotationOnAxis( mRotateY, Axis::Y);
-                    modelTransfrom *= RotationOnAxis( mRotateZ, Axis::Z);   
+                    modelTransform *= RotationOnAxis( mRotateX, Axis::X);
+                    modelTransform *= RotationOnAxis( mRotateY, Axis::Y);
+                    modelTransform *= RotationOnAxis( mRotateZ, Axis::Z);   
                 }
-                
-                cout << "------------------------------------------------" << endl;
-                PrintMat4(modelTransfrom);
-                cout << "------------------------------------------------" << endl;
                 
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
@@ -547,7 +567,7 @@ bool A2::mouseMoveEvent (
                 if (dY) mTranslateY += deltaX;
                 if (dZ) mTranslateZ += deltaX;
                 if (mouseButtonActive) {
-                    viewTransfrom *= Translation(-mTranslateX, -mTranslateY, -mTranslateZ);
+                    view = (mat4(1.) / Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
                 break;
@@ -557,10 +577,16 @@ bool A2::mouseMoveEvent (
                 if (dY) mRotateY += deltaX;
                 if (dZ) mRotateZ += deltaX;
                 if (dX || dY || dZ) {
-                    viewTransfrom *= RotationOnAxis( mRotateX, Axis::X);
-                    viewTransfrom *= RotationOnAxis( mRotateY, Axis::Y);
-                    viewTransfrom *= RotationOnAxis( mRotateZ, Axis::Z);   
+                    view = (mat4(1.) / RotationOnAxis( mRotateX, Axis::X )) * view;
+                    view = (mat4(1.) / RotationOnAxis( mRotateY, Axis::Y )) * view;
+                    view = (mat4(1.) / RotationOnAxis( mRotateZ, Axis::Z )) * view;
                 }
+
+                                
+                cout << "------------------------------------------------" << endl;
+                PrintMat4(view);
+                cout << "------------------------------------------------" << endl;
+
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
                 
