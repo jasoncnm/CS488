@@ -60,8 +60,11 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[10] = l(7, 6);
     cubeLines[11] = l(6, 2);
 
-    viewFrame = mat4(1.);
-    modelFrame = mat4(1.);    
+    view = mat4(1.);
+    view[3].z = -10.f;
+    model = mat4(1.);
+    modelTransfrom = mat4(1.);
+        
 }
 
 //----------------------------------------------------------------------------------------
@@ -89,6 +92,7 @@ void A2::init()
     generateVertexBuffers();
 
     mapVboDataToVertexAttributeLocation();
+        
 }
 
 //----------------------------------------------------------------------------------------
@@ -183,10 +187,6 @@ void A2::mapVboDataToVertexAttributeLocation()
 }
 
 void A2::Reset() {
-    mode = Modes::RModel;
-    mTranslateX = mTranslateY = mTranslateZ = 0;
-    mRotateX = mRotateY = mRotateZ = 0;
-    mScaleX = mScaleY = mScaleZ = 250;
 }
 
 //---------------------------------------------------------------------------------------
@@ -216,61 +216,52 @@ PrintMat4( glm::mat4 mat )
 }
 
 mat4 A2::Translation (
-    mat4 T ,float dx, float dy, float dz
+    float dx, float dy, float dz
 ) {
     mat4 M(1.);
-    M[3][0] = dx;
-    M[3][1] = dy;
-    M[3][2] = dz;   
-    return M * T;
+    M[3].x = dx;
+    M[3].y = dy;
+    M[3].z = dz;   
+    return M;
 }
 
 //---------------------------------------------------------------------------------------
 mat4 A2::Scale (
-    mat4 T, float sx, float sy, float sz
-) {
+    float sx, float sy, float sz
+                ) {
     mat4 M(1.);
-    M[0][0] = sx;
-    M[1][1] = sy;
-    M[2][2] = sz;
-    return M * T;
+    M[0][0] = sx * 0.5f;
+    M[1][1] = sy * 0.5f;
+    M[2][2] = sz * 0.5f;
+    return M;
 }
 
 //---------------------------------------------------------------------------------------
-mat4 A2::RotationOnAxis (
-    mat4 T, float theta, Axis axi
-) {
+mat4 A2::RotationOnAxis( float theta, Axis axi ) {
     mat4 M(1.);
+    theta *= 0.01f;
     switch (axi) {
         case Axis::X:
             M[1][1] =  cos(theta);
-            M[2][1] = -sin(theta);
-            M[1][2] =  sin(theta);
-            M[2][2] =  cos(theta);
-            break;
-        case Axis::Z:
-            M[0][0] =  cos(theta);
-            M[0][2] = -sin(theta);
-            M[2][0] =  sin(theta);
+            M[1][2] = -sin(theta);
+            M[2][1] =  sin(theta);
             M[2][2] =  cos(theta);
             break;
         case Axis::Y:
             M[0][0] =  cos(theta);
-            M[1][0] = -sin(theta);
+            M[2][0] =  sin(theta);
+            M[0][2] = -sin(theta);
+            M[2][2] =  cos(theta);
+            break;
+        case Axis::Z:
+            M[0][0] =  cos(theta);
             M[0][1] =  sin(theta);
+            M[1][0] = -sin(theta);
             M[1][1] =  cos(theta);            
             break;
         default:
             break;
     }
-    return M * T;
-}
-
-mat3x4 A2::OrthographicMode () {
-    mat3x4 M;
-    M[0] = vec4(1,0,0,0);
-    M[1] = vec4(0,1,0,0);
-    M[2] = vec4(0,0,0,1);
     return M;
 }
 
@@ -316,50 +307,45 @@ float clamp(float val, float low, float high) {
 //----------------------------------------------------------------------------------------
 void A2::OrthDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
-    mat4 W(1.);
-#if 1
-    modelFrame = Scale(modelFrame, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
-    /*
-    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateX, Axis::X);
-    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateY, Axis::Y);
-    modelFrame = RotationOnAxis(modelFrame, 0.01f * mRotateZ, Axis::Z);
-    modelFrame = Translation(modelFrame, mTranslateX, mTranslateY, mTranslateZ);
-    */  
-#else
-    W = Scale(W, mScaleX * 0.5, mScaleY * 0.5, mScaleZ * 0.5);
-    W = RotationOnAxis(W, 0.01f * mRotateX, Axis::X);
-    W = RotationOnAxis(W, 0.01f * mRotateY, Axis::Y);
-    W = RotationOnAxis(W, 0.01f * mRotateZ, Axis::Z);
-    W = Translation(W, mTranslateX, mTranslateY, mTranslateZ);
-        
-#endif
-    cout << "--------------------------------------------------" << endl;
-    cout << "W:" << endl;
-    PrintMat4(W);
-    cout << "--------------------------------------------------" << endl;
-    cout << "modelFrame:" << endl;
-    PrintMat4(modelFrame);
-
+    mat4 modelScale = Scale(mScaleX, mScaleY, mScaleZ);
     
     for( u32 i = 0; i < 12; i++) {
         LineIndex index = cubeLines[i];
         vec4 lineLeft = cube[index.left];
         vec4 lineRight = cube[index.right];
-#if 1 
-        vec4 PA = modelFrame * lineLeft;
-        vec4 PB = modelFrame * lineRight;
-#else
-        vec4 PA = W * lineLeft;
-        vec4 PB = W * lineRight;
-#endif        
-        vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
-        vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));
         
+        vec4 PA = modelTransfrom * model * modelScale * lineLeft;
+        vec4 PB = modelTransfrom * model * modelScale * lineRight;
+        
+        vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
+        vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
         drawLine(A, B);
     } // for
-#if 1
-    mScaleX = mScaleY = mScaleZ = 2;
-#endif
+
+    mat4 modelFrameScale = Scale(250, 250, 250);
+    
+    // TODO: Not quite right yet
+    vec4 Origin = modelTransfrom * model * modelFrameScale * model[3];
+    vec4 axisX = modelTransfrom * model * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
+    vec4 axisY = modelTransfrom * model * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
+    vec4 axisZ = modelTransfrom * model * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+    
+    // NOTE: Model X axis
+    setLineColour(vec3(1.0f, 0, 0));
+    vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+    vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
+    drawLine(A, B);
+
+    // NOTE: Model Y axis
+    setLineColour(vec3(0, 1.0f, 0));
+    vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
+    drawLine(A, C);
+
+    // NOTE: Model Z axis
+    setLineColour(vec3(0, 0, 1.0f));
+    vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+    drawLine(A, D);
+    
 }
 
 
@@ -371,28 +357,9 @@ void A2::appLogic()
 {
     // Place per frame, application logic here ...
     
-
     // Call at the beginning of frame, before drawing lines:
     initLineData();
-
     OrthDraw();
-    
-#if 0
-    // Draw outer square:
-    setLineColour(vec3(1.0f, 0.7f, 0.8f));
-    drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
-    drawLine(vec2(0.5f, -0.5f), vec2(0.5f, 0.5f));
-    drawLine(vec2(0.5f, 0.5f), vec2(-0.5f, 0.5f));
-    drawLine(vec2(-0.5f, 0.5f), vec2(-0.5f, -0.5f));
-
-
-    // Draw inner square:
-    setLineColour(vec3(0.2f, 1.0f, 1.0f));
-    drawLine(vec2(-0.25f, -0.25f), vec2(0.25f, -0.25f));
-    drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
-    drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
-    drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
-#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -520,6 +487,41 @@ bool A2::mouseMoveEvent (
         // cout << " mTranslateX " << mTranslateX;
 
         switch (mode) {
+
+#if 1
+
+            case Modes::TModel:
+                if (dX) mTranslateX += deltaX;
+                if (dY) mTranslateY += deltaX;
+                if (dZ) mTranslateZ += deltaX;
+                if (mouseButtonActive) {
+                    modelTransfrom *= Translation(mTranslateX, mTranslateY, mTranslateZ);
+                }
+                mTranslateX = mTranslateY = mTranslateZ = 0;
+                break;
+                
+            case Modes::RModel:
+                if (dX) mRotateX += deltaX;
+                if (dY) mRotateY += deltaX;
+                if (dZ) mRotateZ += deltaX;
+                if (dX || dY || dZ) {
+                    modelTransfrom *= RotationOnAxis( mRotateX, Axis::X);
+                    modelTransfrom *= RotationOnAxis( mRotateY, Axis::Y);
+                    modelTransfrom *= RotationOnAxis( mRotateZ, Axis::Z);   
+                }
+                
+                cout << "------------------------------------------------" << endl;
+                PrintMat4(modelTransfrom);
+                cout << "------------------------------------------------" << endl;
+                
+                mRotateX = mRotateY = mRotateZ = 0;                
+                break;
+            case Modes::SModel:
+                // if (deltaX < 2) deltaX = 2;
+                if (dX) mScaleX += deltaX;
+                if (dY) mScaleY += deltaX;
+                if (dZ) mScaleZ += deltaX;
+#else
             case Modes::TModel:
                 if (dX) mTranslateX += deltaX;
                 if (dY) mTranslateY += deltaX;
@@ -531,9 +533,11 @@ bool A2::mouseMoveEvent (
                 if (dZ) mRotateZ += deltaX;
                 break;
             case Modes::SModel:
+                // if (deltaX < 2) deltaX = 2;
                 if (dX) mScaleX += deltaX;
                 if (dY) mScaleY += deltaX;
                 if (dZ) mScaleZ += deltaX;
+#endif
                 break;
                 
                 

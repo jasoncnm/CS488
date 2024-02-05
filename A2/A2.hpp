@@ -70,9 +70,9 @@ protected:
     void OrthDraw();
     void Reset();
     glm::vec2   WindowToViewPort(glm::vec2 pw);
-    glm::mat4   Translation(glm::mat4 T, float dx, float dy, float dz);
-    glm::mat4   Scale (glm::mat4 T, float sx, float sy, float sz);
-    glm::mat4   RotationOnAxis(glm::mat4 T, float theta, Axis ax);
+    glm::mat4   Translation(float dx, float dy, float dz);
+    glm::mat4   Scale (float sx, float sy, float sz);
+    glm::mat4   RotationOnAxis(float theta, Axis axi);
     glm::mat3x4 OrthographicMode();
     
     void setLineColour(const glm::vec3 & colour);
@@ -89,10 +89,15 @@ protected:
 
     VertexData m_vertexData;
 
-    glm::mat4 viewFrame;
-    glm::mat4 modelFrame;
+    glm::mat4 model;
+    glm::mat4 modelTransfrom;
+    
+    glm::mat4 view;
+    glm::mat4 viewTransorm;
+    
     glm::vec3 m_currentLineColour;
     glm::vec4 cube[8];
+    
     LineIndex cubeLines[12];
     bool mouseButtonActive = false;
     bool dX, dY, dZ;
