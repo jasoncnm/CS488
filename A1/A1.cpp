@@ -460,7 +460,7 @@ void A1::appLogic()
     if (!mouseButtonActive) rotation += persistence;
 
     cubeHeight = clamp(cubeHeight, 0.0f, 2.8f);
-    scaleSize = clamp (scaleSize, 0.5f, 3.0f);
+    
     
 }
 
@@ -614,9 +614,13 @@ void A1::draw()
     // Create a global transformation for the model (centre it).
     mat4 W;
     W = glm::rotate(W, rotation, axis);
-    W = glm::scale(W, vec3(scaleSize));
     W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
-    
+
+    view = glm::lookAt( 
+        glm::vec3( 0.0f, 2.*float(DIM)*2.0*M_SQRT1_2 + scaleSize, float(DIM)*2.0*M_SQRT1_2  ),
+        glm::vec3( 0.0f, 0.0f, 0.0f),
+        glm::vec3( 0.0f, 1.0f, 0.0f ) );
+
     
     m_shader.enable();
     glEnable( GL_DEPTH_TEST );
