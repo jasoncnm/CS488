@@ -113,13 +113,17 @@ void A2::init()
 
     view = inverse(viewMatrix()) * view;
 
-    gnormScale = Scale(1, 1, 1);
+    gnormScale = Scale(250, 250, 250);
 
-    PrintMat4(view);
+    // PrintMat4(view);
+
+    viewport.Corner1 = vec2(-0.9 , -0.9);
+    viewport.Corner2 = vec2(0.9, 0.9);
+    
 }
 
 mat4 A2::viewMatrix() {
-    vec3 lookFrom(0,0, 15);
+    vec3 lookFrom(0,0, 350);
     vec3 lookAt(0,0,-1);
     vec3 up(0,1,0);
     vec3 vz = lookAt - lookFrom;
@@ -254,9 +258,9 @@ mat4 A2::Scale (
     float sx, float sy, float sz
                 ) {
     mat4 M(1.);
-    M[0][0] = sx * 0.25f;
-    M[1][1] = sy * 0.25f;
-    M[2][2] = sz * 0.25f;
+    M[0][0] = sx * 0.5f;
+    M[1][1] = sy * 0.5f;
+    M[2][2] = sz * 0.5f;
     return M;
 }
 
@@ -312,14 +316,14 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
     {
         
         vec3 normal = vec3(0, 0, 1);
-        vec3 P = vec3(0, 0, 14);        
+        vec3 P = vec3(0, 0, 0);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
-
-        cout << "----------------------------------------" << endl;
-        cout << "vecANear   " << vecA << "    vecBNear   " << vecB << endl;
-        cout << "----------------------------------------" << endl;
-        
+#if 0
+        // cout<< "----------------------------------------" << endl;
+        // cout<< "vecANear   " << vecA << "    vecBNear   " << vecB << endl;
+        // cout<< "----------------------------------------" << endl;
+#endif        
         if (vecA < 0 && vecB < 0) {
             return false;
         } else if (vecA >= 0 && vecB >= 0) {
@@ -336,14 +340,15 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
 
     {        
         vec3 normal = vec3(0, 0, -1);
-        vec3 P = vec3(0, 0, 16);        
+        vec3 P = vec3(0, 0, 1000);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
 
-        cout << "----------------------------------------" << endl;
-        cout << "vecAFar   " << vecA << "    vecBFar   " << vecB << endl;
-        cout << "----------------------------------------" << endl;
-        
+#if 0
+        // cout<< "----------------------------------------" << endl;
+        // cout<< "vecAFar   " << vecA << "    vecBFar   " << vecB << endl;
+        // cout<< "----------------------------------------" << endl;
+#endif        
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -365,14 +370,18 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
 vec2 A2::WindowToViewPort(vec2 pw) {
     float Lw = m_windowWidth;
     float Hw = m_windowHeight;
-    float Lv = 0.95f * Lw;
-    float Hv = 0.95f * Hw; 
+    float xc1 = viewport.Corner1.x;
+    float xc2 = viewport.Corner2.x;
+    float yc1 = viewport.Corner1.y;
+    float yc2 = viewport.Corner2.y;
+    float Lv = abs(xc1 - xc2);
+    float Hv = abs(yc1 - yc2); 
     float xwl = -0.5f * Lw;
-    float ywl = -0.5f * Hw;
-    float xvl = -0.5f * Lv;
-    float yvl = -0.5f * Hv;
-
-    vec2 result = vec2((Lv / Lw) * (pw[0] - xwl) + xvl, (Hv / Hw) * (pw[1] - ywl) + yvl);
+    float ywb = -0.5f * Hw;
+    float xvl = (xc1 < xc2) ? xc1 : xc2;
+    float yvb = (yc1 < yc2) ? yc1 : yc2;
+    
+    vec2 result = vec2((Lv / Lw) * (pw[0] - xwl) + xvl, (Hv / Hw) * (pw[1] - ywb) + yvb);
 
     return result;
 }
@@ -444,8 +453,17 @@ void A2::OrthDraw() {
     setLineColour(vec3(.7f, .2f, .3f));
     D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
     drawLine(A, D);
+
+    // NOTE: draw viewport
+    vec2 E = viewport.Corner1;
+    vec2 F = viewport.Corner2;
+    vec2 G = vec2(F.x, E.y);
+    vec2 H = vec2(E.x, F.y);
     
-    
+    drawLine(E, G);
+    drawLine(E, H);
+    drawLine(F, G);
+    drawLine(F, H);
 }
 
 
@@ -458,6 +476,8 @@ void A2::appLogic()
     // Place per frame, application logic here ...
     if (firstRun) {
         ImGui::SetNextWindowPos(ImVec2(50,50));
+        // cout<< "windowWidth " << m_windowWidth << " windowHeight " << m_windowHeight << endl;
+
         firstRun = false;
     }
     
@@ -488,11 +508,12 @@ void A2::guiLogic()
 
     // Add more gui elements here here ...
     ImGui::PushID( "radio" );
-    ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView  );
-    ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView  );
-    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel );
-    ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel );
-    ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel );
+    ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView    );
+    ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView    );
+    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel   );
+    ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel   );
+    ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel   );
+    ImGui::RadioButton( "Viewport        (V)##Col", (int *)&mode, (int)Modes::Viewport );
     ImGui::PopID();
     
     // Create Button, and check if it was clicked:
@@ -594,9 +615,9 @@ bool A2::mouseMoveEvent (
 
         switch (mode) {
             case Modes::TModel:
-                if (dX) mTranslateX += deltaX * 0.005f;
-                if (dY) mTranslateY += deltaX * 0.005f;
-                if (dZ) mTranslateZ += deltaX * 0.005f;
+                if (dX) mTranslateX += deltaX;
+                if (dY) mTranslateY += deltaX;
+                if (dZ) mTranslateZ += deltaX;
                 if (mouseButtonActive) {
                     modelTransform *= Translation(mTranslateX, mTranslateY, mTranslateZ);
                 }
@@ -617,29 +638,29 @@ bool A2::mouseMoveEvent (
                 break;
             case Modes::SModel:
                 // if (deltaX < 2) deltaX = 2;
-                if (dX) mScaleX += deltaX * 0.005f;
-                if (dY) mScaleY += deltaX * 0.005f;
-                if (dZ) mScaleZ += deltaX * 0.005f;
+                if (dX) mScaleX += deltaX;
+                if (dY) mScaleY += deltaX;
+                if (dZ) mScaleZ += deltaX;
                 break;
 
             case Modes::TView:
-                if (dX) mTranslateX += deltaX * 0.005f;
-                if (dY) mTranslateY += deltaX * 0.005f;
-                if (dZ) mTranslateZ += deltaX * 0.005f;
+                if (dX) mTranslateX += deltaX;
+                if (dY) mTranslateY += deltaX;
+                if (dZ) mTranslateZ += deltaX;
                 if (mouseButtonActive) {
                     view = inverse(Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
                     
-                cout << "------------------------------------------------" << endl;
-                PrintMat4(view);
-                cout << "------------------------------------------------" << endl;
+                cout<< "------------------------------------------------" << endl;
+                 PrintMat4(view);
+                 cout<< "------------------------------------------------" << endl;
                 break;
                 
             case Modes::RView:
-                if (dX) mRotateX += deltaX * 0.01f;
-                if (dY) mRotateY += deltaX * 0.01f;
-                if (dZ) mRotateZ += deltaX * 0.01f;
+                if (dX) mRotateX += deltaX;
+                if (dY) mRotateY += deltaX;
+                if (dZ) mRotateZ += deltaX;
                 if (dX || dY || dZ) {
                     view = inverse(RotationOnAxis( mRotateX, Axis::X )) * view;
                     view = inverse(RotationOnAxis( mRotateY, Axis::Y )) * view;
@@ -647,15 +668,30 @@ bool A2::mouseMoveEvent (
                 }
 
                                 
-                cout << "------------------------------------------------" << endl;
-                PrintMat4(view);
-                cout << "------------------------------------------------" << endl;
+                // cout<< "------------------------------------------------" << endl;
+                // PrintMat4(view);
+                // cout << "------------------------------------------------" << endl;
 
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
+
+            case Modes::Viewport:
+                float xPosScale = xPos * (2.f / m_windowWidth) - 1;
+                float yPosScale = -(yPos * (2.f / m_windowWidth) - 1);
+                cout << "------------------------------------------------" << endl;
+                cout << "xpos: " << xPos << " ypos: " << yPos << endl
+                     << "xposScale: " << xPosScale
+                     << " yposScale: " << yPosScale << endl;
+                cout << "------------------------------------------------" << endl;
+                if (viewportFirstClick) {
+                    viewportFirstClick = false;
+                    viewport.Corner1 = vec2(xPosScale, yPosScale);
+                } else if (dX) {
+                    viewport.Corner2 = vec2(xPosScale, yPosScale);
+                }
                 
-            default:
                 break;
+                
         }        
     }
 
@@ -680,6 +716,7 @@ bool A2::mouseButtonInputEvent (
             mouseButtonActive = true;
             switch (button) {
                 case GLFW_MOUSE_BUTTON_LEFT:
+                    viewportFirstClick = true;
                     dX = true;
                     break;
                 case GLFW_MOUSE_BUTTON_RIGHT:
@@ -695,6 +732,7 @@ bool A2::mouseButtonInputEvent (
 
     if (actions == GLFW_RELEASE) {
         mouseButtonActive = false;
+        viewportFirstClick = false;
         dX = dY = dZ = false;
     }
 

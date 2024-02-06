@@ -41,6 +41,11 @@ struct LineIndex {
     u32 right;
 };
 
+struct ViewPort {
+    glm::vec2 Corner1;
+    glm::vec2 Corner2;
+};
+
 class A2 : public CS488Window {
 public:
     A2();
@@ -95,20 +100,21 @@ protected:
     glm::mat4 modelTransform;
     
     glm::mat4 view;
-    glm::mat4 viewTransform;
-    glm::vec4 lookFrom, lookAt, up;
     
     glm::vec3 m_currentLineColour;
     glm::vec4 cube[8];
 
     glm::mat4 gnormScale;
+
+    bool viewportFirstClick = false;
+    ViewPort viewport;
     
     LineIndex cubeLines[12];
     bool mouseButtonActive = false;
     bool dX, dY, dZ;
     float mTranslateX, mTranslateY, mTranslateZ;
     float mRotateX, mRotateY, mRotateZ;
-    float mScaleX = 1, mScaleY = 1, mScaleZ = 1;
+    float mScaleX = 250, mScaleY = 250, mScaleZ = 250;
     float deltaX;
     float xPrev;
     Modes mode = Modes::RModel;
