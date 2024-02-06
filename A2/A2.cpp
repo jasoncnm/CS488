@@ -23,12 +23,15 @@ bool firstRun = true;
 void
 PrintMat4( glm::mat4 mat )
 {
+    cout << "------------------------------------------------------------------" << endl;
     for( int col = 0; col < 4; col++ )
     {
         // transpose the matrix here:
         fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
                  mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
     }
+    cout << "------------------------------------------------------------------" << endl;
+    
 }
 
 //----------------------------------------------------------------------------------------
@@ -74,14 +77,11 @@ A2::A2() : m_currentLineColour(vec3(0.0f))
     cubeLines[9] = l(4, 7);
     cubeLines[10] = l(7, 6);
     cubeLines[11] = l(6, 2);
-
-    view = mat4(vec4(1, 0, 0, 0),
-                vec4(0, 1, 0, 0),
-                vec4(0, 0, 1, 0),
-                vec4(0, 0, -1, 1));
     
     model = mat4(1.);
     modelTransform = mat4(1.);
+
+    view = mat4(1.);
         
 }
 
@@ -111,20 +111,23 @@ void A2::init()
 
     mapVboDataToVertexAttributeLocation();
 
-    view = viewMatrix();
+    view = inverse(viewMatrix()) * view;
+
+    gnormScale = Scale(1, 1, 1);
+
+    PrintMat4(view);
 }
 
 mat4 A2::viewMatrix() {
-    vec3 lookFrom(0,0,1);
-    vec3 lookAt(0,0,0);
+    vec3 lookFrom(0,0, 15);
+    vec3 lookAt(0,0,-1);
     vec3 up(0,1,0);
     vec3 vz = lookAt - lookFrom;
-    vz = vz / (vz.x * vz.x + vz.y * vz.y + vz.z * vz.z);
+    vz = vz / sqrt(vz.x * vz.x + vz.y * vz.y + vz.z * vz.z);
     vec3 vx = cross(up, vz);
-    vx = vx / (vx.x * vx.x + vx.y * vx.y + vx.z * vx.z);
+    vx = vx / sqrt(vx.x * vx.x + vx.y * vx.y + vx.z * vx.z);
     vec3 vy = cross(vz, vx);
     mat4 V(vec4(vx, 0), vec4(vy, 0), vec4(vz, 0), vec4(lookFrom, 1));
-    PrintMat4(V);
     return V;
 }
 
@@ -251,9 +254,9 @@ mat4 A2::Scale (
     float sx, float sy, float sz
                 ) {
     mat4 M(1.);
-    M[0][0] = sx * 0.5f;
-    M[1][1] = sy * 0.5f;
-    M[2][2] = sz * 0.5f;
+    M[0][0] = sx * 0.25f;
+    M[1][1] = sy * 0.25f;
+    M[2][2] = sz * 0.25f;
     return M;
 }
 
@@ -302,15 +305,68 @@ void A2::drawLine(
     m_vertexData.numVertices += 2;
 }
 
-void A2::clip(vec4 left, vec4 right) {
+bool A2::clip(vec4 *p1, vec4 *p2) {
+   
+    vec3 A = vec3(p1->x, p1->y, p1->z);
+    vec3 B = vec3(p2->x, p2->y, p2->z);
+    {
+        
+        vec3 normal = vec3(0, 0, 1);
+        vec3 P = vec3(0, 0, 14);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+
+        cout << "----------------------------------------" << endl;
+        cout << "vecANear   " << vecA << "    vecBNear   " << vecB << endl;
+        cout << "----------------------------------------" << endl;
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L1;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+
+    } L1:;
+
+    {        
+        vec3 normal = vec3(0, 0, -1);
+        vec3 P = vec3(0, 0, 16);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+
+        cout << "----------------------------------------" << endl;
+        cout << "vecAFar   " << vecA << "    vecBFar   " << vecB << endl;
+        cout << "----------------------------------------" << endl;
+        
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L2;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L2:;
+
+    return true;
     
 }
 
 vec2 A2::WindowToViewPort(vec2 pw) {
     float Lw = m_windowWidth;
     float Hw = m_windowHeight;
-    float Lv = 2;
-    float Hv = 2; 
+    float Lv = 0.95f * Lw;
+    float Hv = 0.95f * Hw; 
     float xwl = -0.5f * Lw;
     float ywl = -0.5f * Hw;
     float xvl = -0.5f * Lv;
@@ -320,7 +376,11 @@ vec2 A2::WindowToViewPort(vec2 pw) {
 
     return result;
 }
+#if 0
+vec4 A2::homogenize(vec4 P) {
 
+}
+#endif
 //----------------------------------------------------------------------------------------
 void A2::OrthDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
@@ -333,19 +393,19 @@ void A2::OrthDraw() {
         
         vec4 PA = view * modelTransform * modelScale * lineLeft;
         vec4 PB = view * modelTransform * modelScale * lineRight;
-        
-        vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
-        vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
-        drawLine(A, B);
+
+        if (clip(&PA, &PB)) {
+            vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
+            vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
+            drawLine(A, B);
+        }
     } // for
-
-    mat4 modelFrameScale = Scale(250, 250, 250);
-
+    
     // NOTE: draw model gnorm
-    vec4 Origin =  view * modelTransform * modelFrameScale * model[3];
-    vec4 axisX  =  view * modelTransform * modelFrameScale * vec4(model[0].x, model[0].y, model[0].z, 1);
-    vec4 axisY  =  view * modelTransform * modelFrameScale * vec4(model[1].x, model[1].y, model[1].z, 1);
-    vec4 axisZ  =  view * modelTransform * modelFrameScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+    vec4 Origin =  view * modelTransform * gnormScale * model[3];
+    vec4 axisX  =  view * modelTransform * gnormScale * vec4(model[0].x, model[0].y, model[0].z, 1);
+    vec4 axisY  =  view * modelTransform * gnormScale * vec4(model[1].x, model[1].y, model[1].z, 1);
+    vec4 axisZ  =  view * modelTransform * gnormScale * vec4(model[2].x, model[2].y, model[2].z, 1);
     
     // NOTE: Model X axis
     setLineColour(vec3(1.0f, 0, 0));
@@ -364,10 +424,10 @@ void A2::OrthDraw() {
     drawLine(A, D);
 
     // NOTE: world gnorm
-    Origin = view * vec4(0,0,0,1);
-    axisX =  view * modelFrameScale * vec4(1, 0, 0, 1);
-    axisY =  view * modelFrameScale * vec4(0, 1, 0, 1);
-    axisZ =  view * modelFrameScale * vec4(0, 0, 1, 1);
+    Origin = view * gnormScale * vec4(0,0,0,1);
+    axisX =  view * gnormScale * vec4(1, 0, 0, 1);
+    axisY =  view * gnormScale * vec4(0, 1, 0, 1);
+    axisZ =  view * gnormScale * vec4(0, 0, 1, 1);
     
     // NOTE: World X axis
     setLineColour(vec3(.2f, .3f, .7f));
@@ -534,9 +594,9 @@ bool A2::mouseMoveEvent (
 
         switch (mode) {
             case Modes::TModel:
-                if (dX) mTranslateX += deltaX;
-                if (dY) mTranslateY += deltaX;
-                if (dZ) mTranslateZ += deltaX;
+                if (dX) mTranslateX += deltaX * 0.005f;
+                if (dY) mTranslateY += deltaX * 0.005f;
+                if (dZ) mTranslateZ += deltaX * 0.005f;
                 if (mouseButtonActive) {
                     modelTransform *= Translation(mTranslateX, mTranslateY, mTranslateZ);
                 }
@@ -557,29 +617,33 @@ bool A2::mouseMoveEvent (
                 break;
             case Modes::SModel:
                 // if (deltaX < 2) deltaX = 2;
-                if (dX) mScaleX += deltaX;
-                if (dY) mScaleY += deltaX;
-                if (dZ) mScaleZ += deltaX;
+                if (dX) mScaleX += deltaX * 0.005f;
+                if (dY) mScaleY += deltaX * 0.005f;
+                if (dZ) mScaleZ += deltaX * 0.005f;
                 break;
 
             case Modes::TView:
-                if (dX) mTranslateX += deltaX;
-                if (dY) mTranslateY += deltaX;
-                if (dZ) mTranslateZ += deltaX;
+                if (dX) mTranslateX += deltaX * 0.005f;
+                if (dY) mTranslateY += deltaX * 0.005f;
+                if (dZ) mTranslateZ += deltaX * 0.005f;
                 if (mouseButtonActive) {
-                    view = (mat4(1.) / Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
+                    view = inverse(Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
+                    
+                cout << "------------------------------------------------" << endl;
+                PrintMat4(view);
+                cout << "------------------------------------------------" << endl;
                 break;
                 
             case Modes::RView:
-                if (dX) mRotateX += deltaX;
-                if (dY) mRotateY += deltaX;
-                if (dZ) mRotateZ += deltaX;
+                if (dX) mRotateX += deltaX * 0.01f;
+                if (dY) mRotateY += deltaX * 0.01f;
+                if (dZ) mRotateZ += deltaX * 0.01f;
                 if (dX || dY || dZ) {
-                    view = (mat4(1.) / RotationOnAxis( mRotateX, Axis::X )) * view;
-                    view = (mat4(1.) / RotationOnAxis( mRotateY, Axis::Y )) * view;
-                    view = (mat4(1.) / RotationOnAxis( mRotateZ, Axis::Z )) * view;
+                    view = inverse(RotationOnAxis( mRotateX, Axis::X )) * view;
+                    view = inverse(RotationOnAxis( mRotateY, Axis::Y )) * view;
+                    view = inverse(RotationOnAxis( mRotateZ, Axis::Z )) * view;
                 }
 
                                 
