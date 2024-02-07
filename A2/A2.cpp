@@ -313,8 +313,7 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
    
     vec3 A = vec3(p1->x, p1->y, p1->z);
     vec3 B = vec3(p2->x, p2->y, p2->z);
-    {
-        
+    {        
         vec3 normal = vec3(0, 0, 1);
         vec3 P = vec3(0, 0, 0);        
         float vecA = dot(A-P, normal);
