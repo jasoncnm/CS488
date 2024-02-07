@@ -1,6 +1,7 @@
 
 
 
+
 // Termm--Fall 2020
 
 #include "A2.hpp"
@@ -113,7 +114,7 @@ void A2::init()
 
     view = inverse(viewMatrix()) * view;
 
-    gnormScale = Scale(250, 250, 250);
+    gnormScale = Scale(1, 1, 1);
 
     // PrintMat4(view);
 
@@ -123,8 +124,8 @@ void A2::init()
 }
 
 mat4 A2::viewMatrix() {
-    vec3 lookFrom(0,0, 350);
-    vec3 lookAt(0,0,-1);
+    vec3 lookFrom(0,0, 3);
+    vec3 lookAt(0,0,1);
     vec3 up(0,1,0);
     vec3 vz = lookAt - lookFrom;
     vz = vz / sqrt(vz.x * vz.x + vz.y * vz.y + vz.z * vz.z);
@@ -227,15 +228,19 @@ void A2::mapVboDataToVertexAttributeLocation()
 }
 
 void A2::Reset() {
-    mScaleX = mScaleY = mScaleZ = 250;
+    mScaleX = mScaleY = mScaleZ = 1;
     modelTransform = mat4(1.);
-    
+    mode = Modes::RModel;
+    dX = dY = dZ = false;
+    mouseButtonActive = false;
+    viewportFirstClick = false;
     view = inverse(viewMatrix()) * view;
-    viewport.Corner1 = vec2(-0.9 , -0.9);
+    viewport.Corner1 = vec2(-0.9, -0.9);
     viewport.Corner2 = vec2(0.9, 0.9);
-    fov = 30;
-    near = 700;
-    far = 100;
+    fov = 15;
+    near = 0;
+    far = 10;
+    xPrev = 0;
 }
 
 //---------------------------------------------------------------------------------------
@@ -267,9 +272,9 @@ mat4 A2::Scale (
     float sx, float sy, float sz
                 ) {
     mat4 M(1.);
-    M[0][0] = sx * 0.5f;
-    M[1][1] = sy * 0.5f;
-    M[2][2] = sz * 0.5f;
+    M[0][0] = sx;
+    M[1][1] = sy;
+    M[2][2] = sz;
     return M;
 }
 
@@ -318,51 +323,14 @@ void A2::drawLine(
     m_vertexData.numVertices += 2;
 }
 
-bool A2::clip(vec4 *p1, vec4 *p2) {
+bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
    
     vec3 A = vec3(p1->x, p1->y, p1->z);
     vec3 B = vec3(p2->x, p2->y, p2->z);
-    {        
-        vec3 normal = vec3(0, 0, -1);
-        vec3 P = vec3(0, 0, near);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
-        if (vecA < 0 && vecB < 0) {
-            return false;
-        } else if (vecA >= 0 && vecB >= 0) {
-            goto L1;
-        }
-        float t = vecA / (vecA - vecB);
-        if (vecA < 0) {
-            *p1 = *p1 + t * (*p2 - *p1);
-        } else  {
-            *p2 = *p1 + t * (*p2 - *p1);
-        }
-
-    } L1:;
-
-    {        
-        vec3 normal = vec3(0, 0, 1);
-        vec3 P = vec3(0, 0, far);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
-        
-        if (vecA < 0 && vecB < 0) {
-            return false;
-        } else if (vecA >= 0 && vecB >= 0) {
-            goto L2;
-        }
-        float t = vecA / (vecA - vecB);
-        if (vecA < 0) {
-            *p1 = *p1 + t * (*p2 - *p1);
-        } else  {
-            *p2 = *p1 + t * (*p2 - *p1);
-        }
-    } L2:;
-
+  
     {        
         vec3 normal = vec3(1, 0, 0);
-        vec3 P = vec3(-0.5f * m_windowWidth, 0, 0);        
+        vec3 P = vec3(-1, 0, 0);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
         
@@ -381,7 +349,7 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
 
     {        
         vec3 normal = vec3(-1, 0, 0);
-        vec3 P = vec3(0.5f * m_windowWidth, 0, 0);        
+        vec3 P = vec3(1, 0, 0);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
         
@@ -399,27 +367,8 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
     } L4:;
 
     {        
-        vec3 normal = vec3(0, 1, 0);
-        vec3 P = vec3(0, -0.5f * m_windowHeight, 0);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
-        
-        if (vecA < 0 && vecB < 0) {
-            return false;
-        } else if (vecA >= 0 && vecB >= 0) {
-            goto L5;
-        }
-        float t = vecA / (vecA - vecB);
-        if (vecA < 0) {
-            *p1 = *p1 + t * (*p2 - *p1);
-        } else  {
-            *p2 = *p1 + t * (*p2 - *p1);
-        }
-    } L5:;
-
-    {        
         vec3 normal = vec3(0, -1, 0);
-        vec3 P = vec3(0, 0.5f * m_windowHeight, 0);        
+        vec3 P = vec3(0, 1, 0);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
         
@@ -436,13 +385,76 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
         }
     } L6:;
             
+    {        
+        vec3 normal = vec3(0, 1, 0);
+        vec3 P = vec3(0, -1, 0);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L5;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L5:;
+
     return true;
     
 }
 
+bool A2::nearFarPlaneClip(vec4 *p1, vec4 *p2) {
+   
+    vec3 A = vec3(p1->x, p1->y, p1->z);
+    vec3 B = vec3(p2->x, p2->y, p2->z);
+    {        
+        vec3 normal = vec3(0, 0, 1);
+        vec3 P = vec3(0, 0, near);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L1;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+
+    } L1:;
+
+    {        
+        vec3 normal = vec3(0, 0, -1);
+        vec3 P = vec3(0, 0, far);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L2;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L2:;
+    return true;    
+}
+
 vec2 A2::WindowToViewPort(vec2 pw) {
-    float Lw = m_windowWidth;
-    float Hw = m_windowHeight;
+    float Lw = 2;
+    float Hw = 2;
     float xc1 = viewport.Corner1.x;
     float xc2 = viewport.Corner2.x;
     float yc1 = viewport.Corner1.y;
@@ -466,13 +478,12 @@ float cot(float theta) {
 //----------------------------------------------------------------------------------------
 void A2::DoProjection(vec4 *P) {
     
-#if 0
-    float aspect = abs(viewport.Corner1.x - viewport.Corner2.x) / abs(viewport.Corner1.y - viewport.Corner2.y);
-    float x_scale = cot(0.5f * radians(fov)) / (aspect * -P->z);
-    float y_scale = cot(radians(fov)) / -P->z;
-    P->x *= (1/P->z);
-    P->y *= (1/P->z);
-#endif 
+    if (fov <= 2.5f ) fov = 2.5f;
+    if (fov >= 80) fov = 80;
+    float x_scale = cot(radians(fov)) / P->z * 0.25;
+    float y_scale = cot(radians(fov)) / P->z * 0.25;
+    P->x *= x_scale;
+    P->y *= y_scale;
 }
 
 //----------------------------------------------------------------------------------------
@@ -488,71 +499,103 @@ void A2::ProjDraw() {
         vec4 PA = view * modelTransform * modelScale * lineLeft;
         vec4 PB = view * modelTransform * modelScale * lineRight;
 
-        if (clip(&PA, &PB)) {
-            // TODO: do projection here
+        if (nearFarPlaneClip(&PA, &PB)) {
             DoProjection(&PA);
             DoProjection(&PB);
-            vec2 A = WindowToViewPort(vec2(PA.x, PA.y));
-            vec2 B = WindowToViewPort(vec2(PB.x, PB.y));        
-            drawLine(A, B);
+            if (outerPlanesClip(&PA, &PB)) {
+                vec2 A = WindowToViewPort(vec2(PA.x, PA.y));
+                vec2 B = WindowToViewPort(vec2(PB.x, PB.y));        
+                drawLine(A, B);
+            }
         }
     } // for
-    
+
     // NOTE: draw model gnorm
     vec4 Origin =  view * modelTransform * gnormScale * model[3];
     vec4 axisX  =  view * modelTransform * gnormScale * vec4(model[0].x, model[0].y, model[0].z, 1);
     vec4 axisY  =  view * modelTransform * gnormScale * vec4(model[1].x, model[1].y, model[1].z, 1);
     vec4 axisZ  =  view * modelTransform * gnormScale * vec4(model[2].x, model[2].y, model[2].z, 1);
-    DoProjection(&Origin);
-    DoProjection(&axisX);
-    DoProjection(&axisY);
-    DoProjection(&axisZ);
-    
+        
     // NOTE: Model X axis
-    setLineColour(vec3(1.0f, 0, 0));
-    vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-    vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
-    drawLine(A, B);
-
+    if (nearFarPlaneClip(&Origin, &axisX)) {
+        DoProjection(&Origin);
+        DoProjection(&axisX);
+        if (outerPlanesClip(&Origin, &axisX)) {
+                
+            setLineColour(vec3(1.0f, 0, 0));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
+            drawLine(A, B);
+        }
+    }
+    
     // NOTE: Model Y axis
-    setLineColour(vec3(0, 1.0f, 0));
-    vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
-    drawLine(A, C);
-
+    if (nearFarPlaneClip(&Origin, &axisY)) {
+        DoProjection(&axisY);
+        if (outerPlanesClip(&Origin, &axisY)) {    
+            setLineColour(vec3(0, 1.0f, 0));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
+            drawLine(A, C);
+        }
+    }
+    
     // NOTE: Model Z axis
-    setLineColour(vec3(0, 0, 1.0f));
-    vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
-    drawLine(A, D);
-
+    if (nearFarPlaneClip(&Origin, &axisZ)) {
+        DoProjection(&axisZ);
+        if (outerPlanesClip(&Origin, &axisZ)) {
+    
+            setLineColour(vec3(0, 0, 1.0f));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+            drawLine(A, D);
+        }
+    }
+    
     // NOTE: world gnorm
     Origin = view * gnormScale * vec4(0,0,0,1);
     axisX =  view * gnormScale * vec4(1, 0, 0, 1);
     axisY =  view * gnormScale * vec4(0, 1, 0, 1);
     axisZ =  view * gnormScale * vec4(0, 0, 1, 1);
 
-    DoProjection(&Origin);
-    DoProjection(&axisX);
-    DoProjection(&axisY);
-    DoProjection(&axisZ);
-    
-    
     // NOTE: World X axis
-    setLineColour(vec3(.2f, .3f, .7f));
-    A = WindowToViewPort(vec2(Origin.x, Origin.y));
-    B = WindowToViewPort(vec2(axisX.x, axisX.y));
-    drawLine(A, B);
-
+    if (nearFarPlaneClip(&Origin, &axisX)) {
+        DoProjection(&Origin);
+        DoProjection(&axisX);
+        if (outerPlanesClip(&Origin, &axisX)) {
+                
+            setLineColour(vec3(1.0f, 0, 0));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
+            drawLine(A, B);
+        }
+    }
+    
     // NOTE: World Y axis
-    setLineColour(vec3(.3f, .2f, .7f));
-    C = WindowToViewPort(vec2(axisY.x, axisY.y));
-    drawLine(A, C);
-
+    if (nearFarPlaneClip(&Origin, &axisY)) {
+        DoProjection(&axisY);
+        if (outerPlanesClip(&Origin, &axisY)) {    
+            setLineColour(vec3(0, 1.0f, 0));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
+            drawLine(A, C);
+        }
+    }
+    
     // NOTE: World Z axis
-    setLineColour(vec3(.7f, .2f, .3f));
-    D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
-    drawLine(A, D);
+    if (nearFarPlaneClip(&Origin, &axisZ)) {
+        DoProjection(&axisZ);
+        if (outerPlanesClip(&Origin, &axisZ)) {
+    
+            setLineColour(vec3(0, 0, 1.0f));
+            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+            vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+            drawLine(A, D);
+        }
+    }
 
     // NOTE: draw viewport
+    setLineColour(vec3(1,0,1));
     vec2 E = viewport.Corner1;
     vec2 F = viewport.Corner2;
     vec2 G = vec2(F.x, E.y);
@@ -575,7 +618,6 @@ void A2::appLogic()
     if (firstRun) {
         ImGui::SetNextWindowPos(ImVec2(50,50));
         // cout<< "windowWidth " << m_windowWidth << " windowHeight " << m_windowHeight << endl;
-
         firstRun = false;
     }
     
@@ -608,9 +650,9 @@ void A2::guiLogic()
     ImGui::PushID( "radio" );
     ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView       );
     ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView       );
-    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel      );
     ImGui::RadioButton( "Perspective     (P)##Col", (int *)&mode, (int)Modes::Perspective );
     ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel      );
+    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel      );
     ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel      );
     ImGui::RadioButton( "Viewport        (V)##Col", (int *)&mode, (int)Modes::Viewport    );
     ImGui::PopID();
@@ -714,9 +756,9 @@ bool A2::mouseMoveEvent (
 
         switch (mode) {
             case Modes::TModel:
-                if (dX) mTranslateX += deltaX;
-                if (dY) mTranslateY += deltaX;
-                if (dZ) mTranslateZ += deltaX;
+                if (dX) mTranslateX += deltaX * 0.005f;
+                if (dY) mTranslateY += deltaX * 0.005f;
+                if (dZ) mTranslateZ += deltaX * 0.005f;
                 if (mouseButtonActive) {
                     modelTransform *= Translation(mTranslateX, mTranslateY, mTranslateZ);
                 }
@@ -737,22 +779,21 @@ bool A2::mouseMoveEvent (
                 break;
             case Modes::SModel:
                 // if (deltaX < 2) deltaX = 2;
-                if (dX) mScaleX += deltaX;
-                if (dY) mScaleY += deltaX;
-                if (dZ) mScaleZ += deltaX;
+                if (dX) mScaleX += deltaX * 0.005f;
+                if (dY) mScaleY += deltaX * 0.005f;
+                if (dZ) mScaleZ += deltaX * 0.005f;
                 break;
 
             case Modes::TView:
-                if (dX) mTranslateX += deltaX;
-                if (dY) mTranslateY += deltaX;
-                if (dZ) mTranslateZ += deltaX;
+                if (dX) mTranslateX += deltaX * 0.005f;
+                if (dY) mTranslateY += deltaX * 0.005f;
+                if (dZ) mTranslateZ += deltaX * 0.005f;
                 if (mouseButtonActive) {
                     view = inverse(Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
                     
                 cout<< "------------------------------------------------" << endl;
-                cout << " m_windowWidth " << m_windowWidth * 0.5f << " m_windowHeight " << m_windowHeight * 0.5f << endl;
                  PrintMat4(view);
                  cout<< "------------------------------------------------" << endl;
                 break;
@@ -767,19 +808,16 @@ bool A2::mouseMoveEvent (
                     view = inverse(RotationOnAxis( mRotateZ, Axis::Z )) * view;
                 }
 
-                                
-                // cout<< "------------------------------------------------" << endl;
-                // PrintMat4(view);
-                // cout << "------------------------------------------------" << endl;
 
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
 
             case Modes::Perspective:
                 if (dX) fov += 0.1f * deltaX;
-                if (dY) far -= 0.5f * deltaX;
-                if (dZ) near -= 0.5f * deltaX;
-                clamp(fov, 5.f, 160.f);
+                if (dY) far -= 0.005f * deltaX;
+                if (dZ) near -= 0.005f * deltaX;
+                clamp(fov, 5.0f, 160.0f);
+                cout << " FOV: " << fov << endl;
                 break;
             case Modes::Viewport:
                 float xPosScale = xPos * (2.f / m_windowWidth) - 1;
