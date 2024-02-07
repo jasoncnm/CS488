@@ -227,6 +227,15 @@ void A2::mapVboDataToVertexAttributeLocation()
 }
 
 void A2::Reset() {
+    mScaleX = mScaleY = mScaleZ = 250;
+    modelTransform = mat4(1.);
+    
+    view = inverse(viewMatrix()) * view;
+    viewport.Corner1 = vec2(-0.9 , -0.9);
+    viewport.Corner2 = vec2(0.9, 0.9);
+    fov = 30;
+    near = 700;
+    far = 100;
 }
 
 //---------------------------------------------------------------------------------------
@@ -314,8 +323,8 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
     vec3 A = vec3(p1->x, p1->y, p1->z);
     vec3 B = vec3(p2->x, p2->y, p2->z);
     {        
-        vec3 normal = vec3(0, 0, 1);
-        vec3 P = vec3(0, 0, 0);        
+        vec3 normal = vec3(0, 0, -1);
+        vec3 P = vec3(0, 0, near);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
         if (vecA < 0 && vecB < 0) {
@@ -333,8 +342,8 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
     } L1:;
 
     {        
-        vec3 normal = vec3(0, 0, -1);
-        vec3 P = vec3(0, 0, 1000);        
+        vec3 normal = vec3(0, 0, 1);
+        vec3 P = vec3(0, 0, far);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
         
@@ -449,13 +458,25 @@ vec2 A2::WindowToViewPort(vec2 pw) {
 
     return result;
 }
-#if 0
-vec4 A2::homogenize(vec4 P) {
 
+float cot(float theta) {
+    return 1 / tan(theta);
 }
-#endif
+
 //----------------------------------------------------------------------------------------
-void A2::OrthDraw() {
+void A2::DoProjection(vec4 *P) {
+    
+#if 0
+    float aspect = abs(viewport.Corner1.x - viewport.Corner2.x) / abs(viewport.Corner1.y - viewport.Corner2.y);
+    float x_scale = cot(0.5f * radians(fov)) / (aspect * -P->z);
+    float y_scale = cot(radians(fov)) / -P->z;
+    P->x *= (1/P->z);
+    P->y *= (1/P->z);
+#endif 
+}
+
+//----------------------------------------------------------------------------------------
+void A2::ProjDraw() {
     setLineColour(vec3(1.0f, 0.7f, 0.8f));
     mat4 modelScale = Scale(mScaleX, mScaleY, mScaleZ);
     
@@ -468,8 +489,11 @@ void A2::OrthDraw() {
         vec4 PB = view * modelTransform * modelScale * lineRight;
 
         if (clip(&PA, &PB)) {
-            vec2 A = WindowToViewPort(vec2(PA[0], PA[1]));
-            vec2 B = WindowToViewPort(vec2(PB[0], PB[1]));        
+            // TODO: do projection here
+            DoProjection(&PA);
+            DoProjection(&PB);
+            vec2 A = WindowToViewPort(vec2(PA.x, PA.y));
+            vec2 B = WindowToViewPort(vec2(PB.x, PB.y));        
             drawLine(A, B);
         }
     } // for
@@ -479,6 +503,10 @@ void A2::OrthDraw() {
     vec4 axisX  =  view * modelTransform * gnormScale * vec4(model[0].x, model[0].y, model[0].z, 1);
     vec4 axisY  =  view * modelTransform * gnormScale * vec4(model[1].x, model[1].y, model[1].z, 1);
     vec4 axisZ  =  view * modelTransform * gnormScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+    DoProjection(&Origin);
+    DoProjection(&axisX);
+    DoProjection(&axisY);
+    DoProjection(&axisZ);
     
     // NOTE: Model X axis
     setLineColour(vec3(1.0f, 0, 0));
@@ -501,6 +529,12 @@ void A2::OrthDraw() {
     axisX =  view * gnormScale * vec4(1, 0, 0, 1);
     axisY =  view * gnormScale * vec4(0, 1, 0, 1);
     axisZ =  view * gnormScale * vec4(0, 0, 1, 1);
+
+    DoProjection(&Origin);
+    DoProjection(&axisX);
+    DoProjection(&axisY);
+    DoProjection(&axisZ);
+    
     
     // NOTE: World X axis
     setLineColour(vec3(.2f, .3f, .7f));
@@ -547,7 +581,7 @@ void A2::appLogic()
     
     // Call at the beginning of frame, before drawing lines:
     initLineData();
-    OrthDraw();
+    ProjDraw();
 }
 
 //----------------------------------------------------------------------------------------
@@ -572,12 +606,13 @@ void A2::guiLogic()
 
     // Add more gui elements here here ...
     ImGui::PushID( "radio" );
-    ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView    );
-    ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView    );
-    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel   );
-    ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel   );
-    ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel   );
-    ImGui::RadioButton( "Viewport        (V)##Col", (int *)&mode, (int)Modes::Viewport );
+    ImGui::RadioButton( "Rotate    View  (O)##Col", (int *)&mode, (int)Modes::RView       );
+    ImGui::RadioButton( "Translate View  (E)##Col", (int *)&mode, (int)Modes::TView       );
+    ImGui::RadioButton( "Translate Model (T)##Col", (int *)&mode, (int)Modes::TModel      );
+    ImGui::RadioButton( "Perspective     (P)##Col", (int *)&mode, (int)Modes::Perspective );
+    ImGui::RadioButton( "Rotate    Model (R)##Col", (int *)&mode, (int)Modes::RModel      );
+    ImGui::RadioButton( "Scale     Model (S)##Col", (int *)&mode, (int)Modes::SModel      );
+    ImGui::RadioButton( "Viewport        (V)##Col", (int *)&mode, (int)Modes::Viewport    );
     ImGui::PopID();
     
     // Create Button, and check if it was clicked:
@@ -590,7 +625,7 @@ void A2::guiLogic()
     }
 
     ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
-
+    ImGui::Text( "Near: %.1f, Far: %.1f", near, far);
     ImGui::End();
 }
 
@@ -740,6 +775,12 @@ bool A2::mouseMoveEvent (
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
 
+            case Modes::Perspective:
+                if (dX) fov += 0.1f * deltaX;
+                if (dY) far -= 0.5f * deltaX;
+                if (dZ) near -= 0.5f * deltaX;
+                clamp(fov, 5.f, 160.f);
+                break;
             case Modes::Viewport:
                 float xPosScale = xPos * (2.f / m_windowWidth) - 1;
                 float yPosScale = -(yPos * (2.f / m_windowWidth) - 1);
@@ -748,10 +789,9 @@ bool A2::mouseMoveEvent (
                     viewport.Corner1 = vec2(xPosScale, yPosScale);
                 } else if (dX) {
                     viewport.Corner2 = vec2(xPosScale, yPosScale);
-                }
-                
+                }                
                 break;
-                
+
         }        
     }
 
@@ -852,6 +892,17 @@ bool A2::keyInputEvent (
         case GLFW_KEY_S:
             mode = Modes::SModel;
             break;
+        case GLFW_KEY_O:
+            mode = Modes::RView;
+            break;
+        case GLFW_KEY_E:
+            mode = Modes::TView;
+            break;
+        case GLFW_KEY_P:
+            mode = Modes::Perspective;
+            break;
+        case GLFW_KEY_V:
+            mode = Modes::Viewport;
         case GLFW_KEY_A:
             Reset();
             break;

@@ -72,8 +72,9 @@ protected:
     void uploadVertexDataToVbos();
 
     void initLineData();
-    void OrthDraw();
+    void ProjDraw();
     void Reset();
+    void DoProjection(glm::vec4 *P);
     bool clip(glm::vec4 *left, glm::vec4 *right);
     glm::vec2   WindowToViewPort(glm::vec2 pw);
     glm::mat4   viewMatrix();
@@ -117,6 +118,7 @@ protected:
     float mScaleX = 250, mScaleY = 250, mScaleZ = 250;
     float deltaX;
     float xPrev;
+    float far = 100, near = 700, fov = 30;
     Modes mode = Modes::RModel;
     
 };
