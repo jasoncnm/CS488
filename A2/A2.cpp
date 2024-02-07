@@ -319,11 +319,6 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
         vec3 P = vec3(0, 0, 0);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
-#if 0
-        // cout<< "----------------------------------------" << endl;
-        // cout<< "vecANear   " << vecA << "    vecBNear   " << vecB << endl;
-        // cout<< "----------------------------------------" << endl;
-#endif        
         if (vecA < 0 && vecB < 0) {
             return false;
         } else if (vecA >= 0 && vecB >= 0) {
@@ -343,12 +338,6 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
         vec3 P = vec3(0, 0, 1000);        
         float vecA = dot(A-P, normal);
         float vecB = dot(B-P, normal);
-
-#if 0
-        // cout<< "----------------------------------------" << endl;
-        // cout<< "vecAFar   " << vecA << "    vecBFar   " << vecB << endl;
-        // cout<< "----------------------------------------" << endl;
-#endif        
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -363,6 +352,82 @@ bool A2::clip(vec4 *p1, vec4 *p2) {
         }
     } L2:;
 
+    {        
+        vec3 normal = vec3(1, 0, 0);
+        vec3 P = vec3(-0.5f * m_windowWidth, 0, 0);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L3;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L3:;
+
+    {        
+        vec3 normal = vec3(-1, 0, 0);
+        vec3 P = vec3(0.5f * m_windowWidth, 0, 0);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L4;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L4:;
+
+    {        
+        vec3 normal = vec3(0, 1, 0);
+        vec3 P = vec3(0, -0.5f * m_windowHeight, 0);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L5;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L5:;
+
+    {        
+        vec3 normal = vec3(0, -1, 0);
+        vec3 P = vec3(0, 0.5f * m_windowHeight, 0);        
+        float vecA = dot(A-P, normal);
+        float vecB = dot(B-P, normal);
+        
+        if (vecA < 0 && vecB < 0) {
+            return false;
+        } else if (vecA >= 0 && vecB >= 0) {
+            goto L6;
+        }
+        float t = vecA / (vecA - vecB);
+        if (vecA < 0) {
+            *p1 = *p1 + t * (*p2 - *p1);
+        } else  {
+            *p2 = *p1 + t * (*p2 - *p1);
+        }
+    } L6:;
+            
     return true;
     
 }
@@ -653,6 +718,7 @@ bool A2::mouseMoveEvent (
                 mTranslateX = mTranslateY = mTranslateZ = 0;
                     
                 cout<< "------------------------------------------------" << endl;
+                cout << " m_windowWidth " << m_windowWidth * 0.5f << " m_windowHeight " << m_windowHeight * 0.5f << endl;
                  PrintMat4(view);
                  cout<< "------------------------------------------------" << endl;
                 break;
@@ -678,11 +744,6 @@ bool A2::mouseMoveEvent (
             case Modes::Viewport:
                 float xPosScale = xPos * (2.f / m_windowWidth) - 1;
                 float yPosScale = -(yPos * (2.f / m_windowWidth) - 1);
-                cout << "------------------------------------------------" << endl;
-                cout << "xpos: " << xPos << " ypos: " << yPos << endl
-                     << "xposScale: " << xPosScale
-                     << " yposScale: " << yPosScale << endl;
-                cout << "------------------------------------------------" << endl;
                 if (viewportFirstClick) {
                     viewportFirstClick = false;
                     viewport.Corner1 = vec2(xPosScale, yPosScale);
