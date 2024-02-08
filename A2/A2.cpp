@@ -485,7 +485,7 @@ void A2::homogenize(vec4 *P) {
 
 //----------------------------------------------------------------------------------------
 void A2::ProjDraw() {
-    setLineColour(vec3(0, 0.325, 1));
+    setLineColour(vec3(0, 1, 0.686));
     mat4 modelScale = Scale(mScaleX, mScaleY, mScaleZ);
 
     // cout << "modelScale ----------------------------------------------" << endl;
@@ -842,15 +842,13 @@ bool A2::mouseMoveEvent (
                     view = inverse(RotationOnAxis( mRotateY, Axis::Y )) * view;
                     view = inverse(RotationOnAxis( mRotateZ, Axis::Z )) * view;
                 }
-
-
                 mRotateX = mRotateY = mRotateZ = 0;                
                 break;
 
             case Modes::Perspective:
                 if (dX) fov += 0.1f * deltaX;
-                if (dY) far -= 0.005f * deltaX;
-                if (dZ) near -= 0.005f * deltaX;
+                if (dY) far += 0.005f * deltaX;
+                if (dZ) near += 0.005f * deltaX;
                 clamp(fov, 5.0f, 160.0f);
                 // cout << " FOV: " << fov << endl;
                 break;
