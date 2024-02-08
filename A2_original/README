@@ -1,0 +1,30 @@
+## Compilation:
+
+Under the cs488 directory do the following:
+
+    $ cd A2
+    $ premake4 gmake
+    $ make
+
+To run the program, type the command:
+
+    $ ./A2
+
+This program is tested on the VM and lab computer gl33.
+
+---
+
+##Manual:
+
+---
+
+Initial scale is 0.25
+Initial lookForm point is (0, 0, 3)
+lookAt point is (0,0,1)
+Up point is (0,1,0)
+Initial near plane has z value 1
+Initial far plane has z value 5
+The Translation of view and model and Scale of model factor is 0.0005
+The Rotation of view and model factor is 0.01
+Change in Field of View factor is 0.1
+Change in far and near plane z value has a factor of 0.005

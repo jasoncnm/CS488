@@ -20,6 +20,21 @@ using namespace glm;
 const float PI = 3.14159265f;
 bool firstRun = true;
 
+//---------------------------------------------------------------------------------------
+void
+PrintMat4( glm::mat4 mat )
+{
+    // cout << "------------------------------------------------------------------" << endl;
+    for( int col = 0; col < 4; col++ )
+    {
+        // transpose the matrix here:
+        fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
+                 mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
+    }
+    // cout << "------------------------------------------------------------------" << endl;
+    
+}
+
 //----------------------------------------------------------------------------------------
 // Constructor
 VertexData::VertexData()
@@ -101,7 +116,7 @@ void A2::init()
 
     gnormScale = Scale(0.25, 0.25, 0.25);
 
-   
+    // PrintMat4(view);
 
     viewport.Corner1 = vec2(-0.9 , -0.9);
     viewport.Corner2 = vec2(0.9, 0.9);
@@ -472,6 +487,14 @@ void A2::homogenize(vec4 *P) {
 void A2::ProjDraw() {
     setLineColour(vec3(0, 1, 0.686));
     mat4 modelScale = Scale(mScaleX, mScaleY, mScaleZ);
+
+    // cout << "modelScale ----------------------------------------------" << endl;
+    // PrintMat4(modelScale);
+    // cout << "modelTransform ----------------------------------------------" << endl;
+    // PrintMat4(modelTransform);
+    // cout << "view ----------------------------------------------" << endl;
+    // PrintMat4(view);
+    // cout << " ----------------------------------------------" << endl;
     
     for( u32 i = 0; i < 12; i++) {
         LineIndex index = cubeLines[i];
