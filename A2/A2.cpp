@@ -24,14 +24,14 @@ bool firstRun = true;
 void
 PrintMat4( glm::mat4 mat )
 {
-    cout << "------------------------------------------------------------------" << endl;
+    // cout << "------------------------------------------------------------------" << endl;
     for( int col = 0; col < 4; col++ )
     {
         // transpose the matrix here:
         fprintf( stderr, "  %7.2f %7.2f %7.2f %7.2f\n",
                  mat[0][col], mat[1][col], mat[2][col], mat[3][col] );
     }
-    cout << "------------------------------------------------------------------" << endl;
+    // cout << "------------------------------------------------------------------" << endl;
     
 }
 
@@ -114,7 +114,7 @@ void A2::init()
 
     view = inverse(viewMatrix()) * view;
 
-    gnormScale = Scale(1, 1, 1);
+    gnormScale = Scale(0.25, 0.25, 0.25);
 
     // PrintMat4(view);
 
@@ -228,19 +228,21 @@ void A2::mapVboDataToVertexAttributeLocation()
 }
 
 void A2::Reset() {
-    mScaleX = mScaleY = mScaleZ = 1;
-    modelTransform = mat4(1.);
     mode = Modes::RModel;
+    mScaleX = mScaleY = mScaleZ = 0.25f;
+    modelTransform = mat4(1.);
     dX = dY = dZ = false;
     mouseButtonActive = false;
     viewportFirstClick = false;
-    view = inverse(viewMatrix()) * view;
+    view = inverse(viewMatrix()) * mat4(1.);
     viewport.Corner1 = vec2(-0.9, -0.9);
     viewport.Corner2 = vec2(0.9, 0.9);
     fov = 15;
-    near = 0;
-    far = 10;
-    xPrev = 0;
+    near = 1;
+    far = 5;
+    mTranslateX = mTranslateY = mTranslateZ = 0;
+    mRotateX = mRotateY = mRotateZ = 0;                
+             
 }
 
 //---------------------------------------------------------------------------------------
@@ -324,15 +326,10 @@ void A2::drawLine(
 }
 
 bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
-   
-    vec3 A = vec3(p1->x, p1->y, p1->z);
-    vec3 B = vec3(p2->x, p2->y, p2->z);
   
     {        
-        vec3 normal = vec3(1, 0, 0);
-        vec3 P = vec3(-1, 0, 0);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
+        float vecA = p1->x + p1->z;
+        float vecB = p2->x + p2->z;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -348,10 +345,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L3:;
 
     {        
-        vec3 normal = vec3(-1, 0, 0);
-        vec3 P = vec3(1, 0, 0);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
+        float vecA = p1->z - p1->x;
+        float vecB = p2->z - p2->x;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -367,10 +362,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L4:;
 
     {        
-        vec3 normal = vec3(0, -1, 0);
-        vec3 P = vec3(0, 1, 0);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
+        float vecA = p1->z + p1->y;
+        float vecB = p2->z + p2->y;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -386,10 +379,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L6:;
             
     {        
-        vec3 normal = vec3(0, 1, 0);
-        vec3 P = vec3(0, -1, 0);        
-        float vecA = dot(A-P, normal);
-        float vecB = dot(B-P, normal);
+        float vecA = p1->z - p1->y;
+        float vecB = p2->z - p2->y;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -407,6 +398,7 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     return true;
     
 }
+
 
 bool A2::nearFarPlaneClip(vec4 *p1, vec4 *p2) {
    
@@ -477,19 +469,32 @@ float cot(float theta) {
 
 //----------------------------------------------------------------------------------------
 void A2::DoProjection(vec4 *P) {
-    
     if (fov <= 2.5f ) fov = 2.5f;
     if (fov >= 80) fov = 80;
-    float x_scale = cot(radians(fov)) / P->z * 0.25;
-    float y_scale = cot(radians(fov)) / P->z * 0.25;
+    float x_scale = cot(radians(fov));
+    float y_scale = cot(radians(fov));
     P->x *= x_scale;
     P->y *= y_scale;
 }
 
+//-------------------------------------------------------------------------------------------
+void A2::homogenize(vec4 *P) {
+    P->x = (P->x / (P->z));
+    P->y = (P->y / (P->z));
+}
+
 //----------------------------------------------------------------------------------------
 void A2::ProjDraw() {
-    setLineColour(vec3(1.0f, 0.7f, 0.8f));
+    setLineColour(vec3(0, 0.325, 1));
     mat4 modelScale = Scale(mScaleX, mScaleY, mScaleZ);
+
+    // cout << "modelScale ----------------------------------------------" << endl;
+    // PrintMat4(modelScale);
+    // cout << "modelTransform ----------------------------------------------" << endl;
+    // PrintMat4(modelTransform);
+    // cout << "view ----------------------------------------------" << endl;
+    // PrintMat4(view);
+    // cout << " ----------------------------------------------" << endl;
     
     for( u32 i = 0; i < 12; i++) {
         LineIndex index = cubeLines[i];
@@ -503,6 +508,8 @@ void A2::ProjDraw() {
             DoProjection(&PA);
             DoProjection(&PB);
             if (outerPlanesClip(&PA, &PB)) {
+                homogenize(&PA);
+                homogenize(&PB);
                 vec2 A = WindowToViewPort(vec2(PA.x, PA.y));
                 vec2 B = WindowToViewPort(vec2(PB.x, PB.y));        
                 drawLine(A, B);
@@ -510,92 +517,124 @@ void A2::ProjDraw() {
         }
     } // for
 
+    
     // NOTE: draw model gnorm
-    vec4 Origin =  view * modelTransform * gnormScale * model[3];
-    vec4 axisX  =  view * modelTransform * gnormScale * vec4(model[0].x, model[0].y, model[0].z, 1);
-    vec4 axisY  =  view * modelTransform * gnormScale * vec4(model[1].x, model[1].y, model[1].z, 1);
-    vec4 axisZ  =  view * modelTransform * gnormScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+    {
+        vec4 Origin =  view * modelTransform * gnormScale * model[3];
+        vec4 axisX  =  view * modelTransform * gnormScale * vec4(model[0].x, model[0].y, model[0].z, 1);
         
-    // NOTE: Model X axis
-    if (nearFarPlaneClip(&Origin, &axisX)) {
-        DoProjection(&Origin);
-        DoProjection(&axisX);
-        if (outerPlanesClip(&Origin, &axisX)) {
-                
-            setLineColour(vec3(1.0f, 0, 0));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
-            drawLine(A, B);
+        // NOTE: Model X axis
+        if (nearFarPlaneClip(&Origin, &axisX)) {
+            DoProjection(&Origin);
+            DoProjection(&axisX);
+            if (outerPlanesClip(&Origin, &axisX)) {
+                homogenize(&Origin);
+                homogenize(&axisX);                                
+                setLineColour(vec3(1.0f, 0, 0));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
+                drawLine(A, B);
+            }
+        }
+    }
+
+    {
+        vec4 Origin =  view * modelTransform * gnormScale * model[3];
+        vec4 axisY  =  view * modelTransform * gnormScale * vec4(model[1].x, model[1].y, model[1].z, 1);
+
+        // NOTE: Model Y axis
+        if (nearFarPlaneClip(&Origin, &axisY)) {
+            DoProjection(&Origin);
+            DoProjection(&axisY);
+            if (outerPlanesClip(&Origin, &axisY)) {    
+                homogenize(&Origin);
+                homogenize(&axisY);                                
+                setLineColour(vec3(0, 1.0f, 0));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
+                drawLine(A, C);
+            }
         }
     }
     
-    // NOTE: Model Y axis
-    if (nearFarPlaneClip(&Origin, &axisY)) {
-        DoProjection(&axisY);
-        if (outerPlanesClip(&Origin, &axisY)) {    
-            setLineColour(vec3(0, 1.0f, 0));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
-            drawLine(A, C);
-        }
-    }
-    
-    // NOTE: Model Z axis
-    if (nearFarPlaneClip(&Origin, &axisZ)) {
-        DoProjection(&axisZ);
-        if (outerPlanesClip(&Origin, &axisZ)) {
-    
-            setLineColour(vec3(0, 0, 1.0f));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
-            drawLine(A, D);
+    {
+        vec4 Origin =  view * modelTransform * gnormScale * model[3];
+        vec4 axisZ  =  view * modelTransform * gnormScale * vec4(model[2].x, model[2].y, model[2].z, 1);
+        // NOTE: Model Z axis
+        if (nearFarPlaneClip(&Origin, &axisZ)) {
+            DoProjection(&Origin);
+            DoProjection(&axisZ);
+            if (outerPlanesClip(&Origin, &axisZ)) {    
+                homogenize(&Origin);
+                homogenize(&axisZ);                                
+                setLineColour(vec3(0, 0, 1.0f));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+                drawLine(A, D);
+            }
         }
     }
     
     // NOTE: world gnorm
-    Origin = view * gnormScale * vec4(0,0,0,1);
-    axisX =  view * gnormScale * vec4(1, 0, 0, 1);
-    axisY =  view * gnormScale * vec4(0, 1, 0, 1);
-    axisZ =  view * gnormScale * vec4(0, 0, 1, 1);
 
-    // NOTE: World X axis
-    if (nearFarPlaneClip(&Origin, &axisX)) {
-        DoProjection(&Origin);
-        DoProjection(&axisX);
-        if (outerPlanesClip(&Origin, &axisX)) {
-                
-            setLineColour(vec3(1.0f, 0, 0));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
-            drawLine(A, B);
-        }
-    }
+    {
+        vec4 Origin = view * gnormScale * vec4(0,0,0,1);
+        vec4 axisX =  view * gnormScale * vec4(1, 0, 0, 1);
     
-    // NOTE: World Y axis
-    if (nearFarPlaneClip(&Origin, &axisY)) {
-        DoProjection(&axisY);
-        if (outerPlanesClip(&Origin, &axisY)) {    
-            setLineColour(vec3(0, 1.0f, 0));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
-            drawLine(A, C);
-        }
-    }
-    
-    // NOTE: World Z axis
-    if (nearFarPlaneClip(&Origin, &axisZ)) {
-        DoProjection(&axisZ);
-        if (outerPlanesClip(&Origin, &axisZ)) {
-    
-            setLineColour(vec3(0, 0, 1.0f));
-            vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
-            vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
-            drawLine(A, D);
+        // NOTE: World X axis
+        if (nearFarPlaneClip(&Origin, &axisX)) {
+            DoProjection(&Origin);
+            DoProjection(&axisX);
+            if (outerPlanesClip(&Origin, &axisX)) {
+                homogenize(&Origin);
+                homogenize(&axisX);                                                           
+                setLineColour(vec3(0.831f, 0.82f, 0.161f));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 B = WindowToViewPort(vec2(axisX.x, axisX.y));
+                drawLine(A, B);
+            }
         }
     }
 
+    {
+        vec4 Origin = view * gnormScale * vec4(0,0,0,1);
+        vec4 axisY =  view * gnormScale * vec4(0, 1, 0, 1);
+    
+        // NOTE: World Y axis
+        if (nearFarPlaneClip(&Origin, &axisY)) {
+            DoProjection(&Origin);
+            DoProjection(&axisY);
+            if (outerPlanesClip(&Origin, &axisY)) {    
+                homogenize(&Origin);
+                homogenize(&axisY);                                
+                setLineColour(vec3(0.69f, 0.106f, 0.851f));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 C = WindowToViewPort(vec2(axisY.x, axisY.y));
+                drawLine(A, C);
+            }
+        }
+    }
+
+    {
+        vec4 Origin = view * gnormScale * vec4(0, 0, 0, 1);
+        vec4 axisZ =  view * gnormScale * vec4(0, 0, 1, 1);
+
+        // NOTE: World Z axis
+        if (nearFarPlaneClip(&Origin, &axisZ)) {
+            DoProjection(&Origin);
+            DoProjection(&axisZ);
+            if (outerPlanesClip(&Origin, &axisZ)) {    
+                homogenize(&Origin);
+                homogenize(&axisZ);                                
+                setLineColour(vec3(0.067f, 0.831f, 0.808f));
+                vec2 A = WindowToViewPort(vec2(Origin.x, Origin.y));
+                vec2 D = WindowToViewPort(vec2(axisZ.x, axisZ. y));
+                drawLine(A, D);
+            }
+        }
+    }
     // NOTE: draw viewport
-    setLineColour(vec3(1,0,1));
+    setLineColour(vec3(0,0,0));
     vec2 E = viewport.Corner1;
     vec2 F = viewport.Corner2;
     vec2 G = vec2(F.x, E.y);
@@ -792,10 +831,6 @@ bool A2::mouseMoveEvent (
                     view = inverse(Translation(mTranslateX, mTranslateY, mTranslateZ)) * view;
                 }
                 mTranslateX = mTranslateY = mTranslateZ = 0;
-                    
-                cout<< "------------------------------------------------" << endl;
-                 PrintMat4(view);
-                 cout<< "------------------------------------------------" << endl;
                 break;
                 
             case Modes::RView:
@@ -817,7 +852,7 @@ bool A2::mouseMoveEvent (
                 if (dY) far -= 0.005f * deltaX;
                 if (dZ) near -= 0.005f * deltaX;
                 clamp(fov, 5.0f, 160.0f);
-                cout << " FOV: " << fov << endl;
+                // cout << " FOV: " << fov << endl;
                 break;
             case Modes::Viewport:
                 float xPosScale = xPos * (2.f / m_windowWidth) - 1;

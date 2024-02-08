@@ -74,6 +74,7 @@ protected:
     void initLineData();
     void ProjDraw();
     void Reset();
+    void homogenize(glm::vec4 *P);
     void DoProjection(glm::vec4 *P);
     bool outerPlanesClip(glm::vec4 *left, glm::vec4 *right);
     bool nearFarPlaneClip(glm::vec4 *left, glm::vec4 *right);
@@ -117,10 +118,10 @@ protected:
     bool dX, dY, dZ;
     float mTranslateX, mTranslateY, mTranslateZ;
     float mRotateX, mRotateY, mRotateZ;
-    float mScaleX = 1, mScaleY = 1, mScaleZ = 1;
+    float mScaleX = 0.25f, mScaleY = 0.25f, mScaleZ = 0.25f;
     float deltaX;
     float xPrev;
-    float far = 10, near = 0, fov = 15;
+    float far = 5, near = 1, fov = 15;
     Modes mode = Modes::RModel;
     
 };
