@@ -313,8 +313,8 @@ void A2::drawLine(
 bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
   
     {        
-        float vecA = p1->x + p1->z;
-        float vecB = p2->x + p2->z;
+        float vecA = p1->x + p1->w;
+        float vecB = p2->x + p2->w;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -330,8 +330,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L3:;
 
     {        
-        float vecA = p1->z - p1->x;
-        float vecB = p2->z - p2->x;
+        float vecA = p1->w - p1->x;
+        float vecB = p2->w - p2->x;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -347,8 +347,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L4:;
 
     {        
-        float vecA = p1->z + p1->y;
-        float vecB = p2->z + p2->y;
+        float vecA = p1->w + p1->y;
+        float vecB = p2->w + p2->y;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -364,8 +364,8 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
     } L6:;
             
     {        
-        float vecA = p1->z - p1->y;
-        float vecB = p2->z - p2->y;
+        float vecA = p1->w - p1->y;
+        float vecB = p2->w - p2->y;
         
         if (vecA < 0 && vecB < 0) {
             return false;
@@ -386,9 +386,9 @@ bool A2::outerPlanesClip(vec4 *p1, vec4 *p2) {
 
 
 bool A2::nearFarPlaneClip(vec4 *p1, vec4 *p2) {
-   
-    vec3 A = vec3(p1->x, p1->y, p1->z);
-    vec3 B = vec3(p2->x, p2->y, p2->z);
+
+    vec3 A(p1->x, p1->y, p1->z);
+    vec3 B(p2->x, p2->y, p2->z);
     {        
         vec3 normal = vec3(0, 0, 1);
         vec3 P = vec3(0, 0, near);        
@@ -460,12 +460,13 @@ void A2::DoProjection(vec4 *P) {
     float y_scale = cot(radians(fov));
     P->x *= x_scale;
     P->y *= y_scale;
+    P->w = P->z / near;
 }
 
 //-------------------------------------------------------------------------------------------
 void A2::homogenize(vec4 *P) {
-    P->x = (P->x / (P->z));
-    P->y = (P->y / (P->z));
+    P->x = (P->x / (P->w));
+    P->y = (P->y / (P->w));
 }
 
 //----------------------------------------------------------------------------------------

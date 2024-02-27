@@ -6,14 +6,14 @@ ifndef config
 endif
 export config
 
-PROJECTS := picking
+PROJECTS := Picking
 
 .PHONY: all clean help $(PROJECTS)
 
 all: $(PROJECTS)
 
-picking: 
-	@echo "==== Building picking ($(config)) ===="
+Picking: 
+	@echo "==== Building Picking ($(config)) ===="
 	@${MAKE} --no-print-directory -C build -f Makefile
 
 clean:
@@ -29,6 +29,6 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   picking"
+	@echo "   Picking"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

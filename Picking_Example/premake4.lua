@@ -18,9 +18,7 @@ if os.get() == "macosx" then
     linkLibs = {
         "cs488-framework",
         "imgui",
-        "glfw3",
-        "lua"
-
+        "glfw3"
     }
 end
 
@@ -29,7 +27,6 @@ if os.get() == "linux" then
         "cs488-framework",
         "imgui",
         "glfw3",
-        "lua",
         "GL",
         "Xinerama",
         "Xcursor",
@@ -53,7 +50,7 @@ buildOptions = {"-std=c++11"}
 solution "CS488-Projects"
     configurations { "Debug", "Release" }
 
-    project "picking"
+    project "Picking"
         kind "ConsoleApp"
         language "C++"
         location "build"
