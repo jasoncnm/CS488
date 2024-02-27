@@ -23,9 +23,10 @@ const size_t CIRCLE_PTS = 48;
 
 static MatrixStack matrixStack;
 
+static bool do_picking = false;
 
 /*******************************************************
- * 
+ * NOTE: this code is taken from trackball.c in Trackball_Example 
  * void vCalcRotVec(float fNewX, float fNewY, 
  *                  float fOldX, float fOldY,
  *                  float fDiameter,
@@ -212,8 +213,8 @@ void A3::processLuaSceneFile(const std::string & filename) {
 void A3::createShaderProgram()
 {
     m_shader.generateProgramObject();
-    m_shader.attachVertexShader( getAssetFilePath("VertexShader.vs").c_str() );
-    m_shader.attachFragmentShader( getAssetFilePath("FragmentShader.fs").c_str() );
+    m_shader.attachVertexShader( getAssetFilePath("Phong.vs").c_str() );
+    m_shader.attachFragmentShader( getAssetFilePath("Phong.fs").c_str() );
     m_shader.link();
 
     m_shader_arcCircle.generateProgramObject();
@@ -372,22 +373,27 @@ void A3::uploadCommonSceneUniforms() {
         glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(m_perpsective));
         CHECK_GL_ERRORS;
 
+        location = m_shader.getUniformLocation("picking");
+        glUniform1i( location, do_picking ? 1 : 0 );
 
         //-- Set LightSource uniform for the scene:
+        if ( !do_picking )
         {
-            location = m_shader.getUniformLocation("light.position");
-            glUniform3fv(location, 1, value_ptr(m_light.position));
-            location = m_shader.getUniformLocation("light.rgbIntensity");
-            glUniform3fv(location, 1, value_ptr(m_light.rgbIntensity));
-            CHECK_GL_ERRORS;
-        }
+            {
+                location = m_shader.getUniformLocation("light.position");
+                glUniform3fv(location, 1, value_ptr(m_light.position));
+                location = m_shader.getUniformLocation("light.rgbIntensity");
+                glUniform3fv(location, 1, value_ptr(m_light.rgbIntensity));
+                CHECK_GL_ERRORS;
+            }
 
-        //-- Set background light ambient intensity
-        {
-            location = m_shader.getUniformLocation("ambientIntensity");
-            vec3 ambientIntensity(0.25f);
-            glUniform3fv(location, 1, value_ptr(ambientIntensity));
-            CHECK_GL_ERRORS;
+            //-- Set background light ambient intensity
+            {
+                location = m_shader.getUniformLocation("ambientIntensity");
+                vec3 ambientIntensity(0.25f);
+                glUniform3fv(location, 1, value_ptr(ambientIntensity));
+                CHECK_GL_ERRORS;
+            }
         }
     }
     m_shader.disable();
@@ -413,6 +419,13 @@ void A3::ResetAll() {
     imode = InterationModes::P;
     mouse_button_active = dx = dy = dz = false;
     prev_xpos = cursor_delta_x = 0;
+    if ( selected ) delete selected;
+    do_picking = false;
+    selected = new bool[m_rootNode->totalSceneNodes()];
+    for (unsigned int i = 0; i < m_rootNode->totalSceneNodes(); i++) {
+        selected[i] = false;
+    }
+    
     ResetPosition();
     ResetOrientation();
     ResetJoints();
@@ -504,11 +517,14 @@ void A3::guiLogic()
 //----------------------------------------------------------------------------------------
 // Update mesh specific shader uniforms:
 static void updateShaderUniforms(
-        const ShaderProgram & shader,
-        const GeometryNode & node,
-        const glm::mat4 & viewMatrix,
-        const glm::mat4 & modelMatrix
-) {
+    unsigned int node_id,
+    const ShaderProgram & shader,
+    const GeometryNode & node,
+    const glm::mat4 & viewMatrix,
+    const glm::mat4 & modelMatrix,
+    const glm::vec3 kd
+                                 )
+{
 
     shader.enable();
     {
@@ -518,18 +534,31 @@ static void updateShaderUniforms(
         glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(modelView));
         CHECK_GL_ERRORS;
 
-        //-- Set NormMatrix:
-        location = shader.getUniformLocation("NormalMatrix");
-        mat3 normalMatrix = glm::transpose(glm::inverse(mat3(modelView)));
-        glUniformMatrix3fv(location, 1, GL_FALSE, value_ptr(normalMatrix));
-        CHECK_GL_ERRORS;
+        // NOTE: using code from Picking_Example/PickingExample.cpp
+        if ( do_picking ) {
+            float r = float(node_id & 0xff) / 255.0f;
+            float g = float((node_id >> 8)&0xff) / 255.0f;
+            float b = float((node_id >> 16)&0xff) / 255.0f;
+
+            //-- Set Material values:
+            location = shader.getUniformLocation("material.kd");
+            glUniform3f(location, r, g, b);
+            
+            CHECK_GL_ERRORS;
+            
+        } else {
+            //-- Set NormMatrix:
+            location = shader.getUniformLocation("NormalMatrix");
+            mat3 normalMatrix = glm::transpose(glm::inverse(mat3(modelView)));
+            glUniformMatrix3fv(location, 1, GL_FALSE, value_ptr(normalMatrix));
+            CHECK_GL_ERRORS;
 
 
-        //-- Set Material values:
-        location = shader.getUniformLocation("material.kd");
-        vec3 kd = node.material.kd;
-        glUniform3fv(location, 1, value_ptr(kd));
-        CHECK_GL_ERRORS;
+            //-- Set Material values:
+            location = shader.getUniformLocation("material.kd");
+            glUniform3fv(location, 1, value_ptr(kd));
+            CHECK_GL_ERRORS;
+        }
     }
     shader.disable();
 
@@ -599,8 +628,12 @@ void A3::renderSceneNode(const SceneNode & pnode) {
     if (pnode.m_nodeType == NodeType::GeometryNode)
     { 
         const GeometryNode * geometryNode = static_cast<const GeometryNode *>(&pnode);
-                    
-        updateShaderUniforms(m_shader, *geometryNode, m_view, matrixStack.M);
+        vec3 kd = geometryNode->material.kd;
+        if ( selected[pnode.m_nodeId] ) {
+            kd = glm::vec3( 1, 1, 0 );
+        }
+        
+        updateShaderUniforms(pnode.m_nodeId, m_shader, *geometryNode, m_view, matrixStack.M, kd);
 
         // Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
         BatchInfo batchInfo = m_batchInfoMap[geometryNode->meshId];
@@ -644,7 +677,9 @@ void A3::renderArcCircle() {
  */
 void A3::cleanup()
 {
-
+    if (selected) {
+        delete selected;
+    }
 }
 
 //----------------------------------------------------------------------------------------
@@ -685,7 +720,6 @@ bool A3::mouseMoveEvent (
                 }
                 
                 if (dy) {
-                    //TODO: impliment this
                     float diameter = (m_windowWidth < m_windowHeight) ? m_windowWidth * 0.5f : m_windowHeight * 0.5f;
                     float iCenterX = m_windowWidth  / 2;
                     float iCenterY = m_windowHeight / 2;
@@ -698,13 +732,7 @@ bool A3::mouseMoveEvent (
                                 fOldModX, fOldModY,
                                 diameter,
                                 &x, &y, &z);
-                    /*
-                      model_rotx += x;
-                      model_roty += y;
-                      model_rotz += z;
-                    */
 
-                    //float theta = sqrt(model_rotx * model_rotx + model_roty * model_roty + model_rotz * model_rotz);
                     float theta = sqrt(x * x + y * y + z * z);
                     if (theta <= -0.00001 || theta > 0.00001) {
                         trackball_rots = rotate(mat4(1.), theta, vec3(-x,y,-z)) * trackball_rots;
@@ -737,18 +765,67 @@ bool A3::mouseButtonInputEvent (
 
     // Fill in with event handling code...
     if (actions == GLFW_PRESS && !ImGui::IsMouseHoveringAnyWindow()) {
-            mouse_button_active = true;
-            switch (button) {
-                case GLFW_MOUSE_BUTTON_LEFT:
-                    dx = true;
-                    break;
-                case GLFW_MOUSE_BUTTON_RIGHT:
-                    dy = true;
-                    break;
-                case GLFW_MOUSE_BUTTON_MIDDLE:
-                    dz = true;
-                    break;
-            }
+        mouse_button_active = true;
+        switch (button) {
+            case GLFW_MOUSE_BUTTON_LEFT:
+                dx = true;
+                if (imode == InterationModes::J) { // NOTE: this code is taken from PickingExample.cpp
+                    
+                    do_picking = true;
+                    // TODO: do_picking
+                    double xpos, ypos;
+                    glfwGetCursorPos( m_window, &xpos, &ypos );
+                    
+                    uploadCommonSceneUniforms();
+                    glClearColor(1.0, 1.0, 1.0, 1.0 );
+                    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+                    glClearColor(0.369, 0.322, 0.322, 1.0);
+
+                    draw();
+
+                    // I don't know if these are really necessary anymore.
+                    // glFlush();
+                    // glFinish();
+
+                    CHECK_GL_ERRORS;
+
+                    // Ugly -- FB coordinates might be different than Window coordinates
+                    // (e.g., on a retina display).  Must compensate.
+                    xpos *= double(m_framebufferWidth) / double(m_windowWidth);
+                    // WTF, don't know why I have to measure y relative to the bottom of
+                    // the window in this case.
+                    ypos = m_windowHeight - ypos;
+                    ypos *= double(m_framebufferHeight) / double(m_windowHeight);
+
+                    GLubyte buffer[ 4 ] = { 0, 0, 0, 0 };
+                    // A bit ugly -- don't want to swap the just-drawn false colours
+                    // to the screen, so read from the back buffer.
+                    glReadBuffer( GL_BACK );
+                    // Actually read the pixel at the mouse location.
+                    glReadPixels( int(xpos), int(ypos), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, buffer );
+                    CHECK_GL_ERRORS;
+
+                    // Reassemble the object ID.
+                    unsigned int what = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16);
+
+                    if( what < m_rootNode->totalSceneNodes() ) {
+                        selected[what] = !selected[what];
+                    }
+
+                    do_picking = false;
+
+                    CHECK_GL_ERRORS;
+
+
+                }
+                break;
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                dy = true;
+                break;
+            case GLFW_MOUSE_BUTTON_MIDDLE:
+                dz = true;
+                break;
+        }
     }
     
     if (actions == GLFW_RELEASE) {
@@ -764,9 +841,9 @@ bool A3::mouseButtonInputEvent (
  * Event handler.  Handles mouse scroll wheel events.
  */
 bool A3::mouseScrollEvent (
-        double xOffSet,
-        double yOffSet
-) {
+    double xOffSet,
+    double yOffSet
+                           ) {
     bool eventHandled(false);
 
     // Fill in with event handling code...

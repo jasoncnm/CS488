@@ -113,7 +113,6 @@ protected:
 
     float cursor_delta_x, cursor_delta_y, prev_xpos, prev_ypos;
     bool dx, dy, dz, mouse_button_active;
-
-    glm::vec3 prev_trackball_pos;
+    bool *selected;
     
 };
