@@ -27,6 +27,8 @@ struct MatrixStack {
     }
 };
 
+enum InterationModes { P, J, None };
+
 class A3 : public CS488Window {
 public:
     A3(const std::string & luaSceneFile);
@@ -59,8 +61,15 @@ protected:
     void initPerspectiveMatrix();
     void uploadCommonSceneUniforms();
     void renderSceneGraph(const SceneNode &node);
+    void renderSceneNode(const SceneNode &node);
     void renderArcCircle();
 
+    void ResetPosition();
+    void ResetOrientation();
+    void ResetJoints();
+    void ResetAll();
+    void Quit();
+    
     glm::mat4 m_perpsective;
     glm::mat4 m_view;
     
@@ -88,4 +97,23 @@ protected:
     std::string m_luaSceneFile;
 
     std::shared_ptr<SceneNode> m_rootNode;
+
+    bool opt_show_circle, opt_show_zbuf, opt_show_bf_culling, opt_show_ff_culling;
+    bool app_reset_pos, app_reset_ori, app_reset_joints, app_reset_all, app_quit;
+
+    glm::mat4 w_trans;
+    glm::vec3 model_translation;
+    glm::vec4 init_pos;
+
+    glm::mat4 trackball_rots;
+    float model_rotx, model_roty, model_rotz;
+    glm::mat3 init_rot;
+
+    InterationModes imode;
+
+    float cursor_delta_x, cursor_delta_y, prev_xpos, prev_ypos;
+    bool dx, dy, dz, mouse_button_active;
+
+    glm::vec3 prev_trackball_pos;
+    
 };
