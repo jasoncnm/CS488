@@ -24,7 +24,7 @@ neck:set_material(white)
 neck:translate(0, 1.5, 0)
 neck:scale(0.2, 0.8, 0.5)
 
-neckJoint = gr.joint('neckJoint', {-50, 0, 50}, {-100, 0, 100})
+neckJoint = gr.joint('neckJoint', {-50, 0, 50}, {-27, 0, 27})
 neck:add_child(neckJoint)
 
 head = gr.mesh('sphere', 'head')
@@ -45,21 +45,29 @@ righteye:set_material(blue)
 righteye:translate(1, 0, 5)
 righteye:scale(0.2,0.2,0.2)
 
+leftshoulderjoint = gr.joint('leftshoulderjoint', {0,0,0}, {-100, 0, 0})
+shoulders:add_child(leftshoulderjoint)
+
 leftupperarm = gr.mesh('sphere', 'leftupperarm')
-shoulders:add_child(leftupperarm)
+leftshoulderjoint:add_child(leftupperarm)
 leftupperarm:set_material(white)
 leftupperarm:translate(-4.5, -1, 0)
 leftupperarm:scale(0.2, 2, 0.75)
 
+leftelbowjoint = gr.joint('leftelbowjoint', {0,0,0}, {-50, 0 , 0})
+leftupperarm:add_child(leftelbowjoint)
 
 leftforearm = gr.mesh('sphere', 'leftforearm')
-leftupperarm:add_child(leftforearm)
+leftelbowjoint:add_child(leftforearm)
 leftforearm:set_material(white)
 leftforearm:translate(0, -1.5, 0)
 leftforearm:scale(0.5, 1, 0.5)
 
+leftwhistjoint = gr.joint('leftwhistjoint', {0,0,0}, {-45,0,0})
+leftforearm:add_child(leftwhistjoint)
+
 lefthand = gr.mesh('sphere', 'lefthand')
-leftforearm:add_child(lefthand)
+leftwhistjoint:add_child(lefthand)
 lefthand:set_material(white)
 lefthand:translate(0, -5, 0)
 lefthand:scale(1, 0.2, 1)

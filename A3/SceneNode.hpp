@@ -25,12 +25,12 @@ public:
     virtual ~SceneNode();
     
     int totalSceneNodes() const;
-
     
     const glm::mat4& get_transform() const;
     const glm::mat4& get_inverse() const;
     
     void set_transform(const glm::mat4& m);
+    void set_head();
     
     void add_child(SceneNode* child);
     
@@ -44,18 +44,18 @@ public:
 
     friend std::ostream & operator << (std::ostream & os, const SceneNode & node);
 
-    bool isSelected;
+    bool isSelected, selectable, head;
     
     // Transformations
     glm::mat4 trans;
     glm::mat4 invtrans;
     
     std::list<SceneNode*> children;
+    SceneNode * parent;
 
     NodeType m_nodeType;
     std::string m_name;
     unsigned int m_nodeId;
-
 
 private:
     // The number of SceneNode instances.

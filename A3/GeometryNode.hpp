@@ -6,14 +6,14 @@
 
 class GeometryNode : public SceneNode {
 public:
-	GeometryNode(
-		const std::string & meshId,
-		const std::string & name
-	);
+    GeometryNode(
+        const std::string & meshId,
+        const std::string & name
+    );
 
-	Material material;
+    Material material;
 
-	// Mesh Identifier. This must correspond to an object name of
-	// a loaded .obj file.
-	std::string meshId;
+    // Mesh Identifier. This must correspond to an object name of
+    // a loaded .obj file.
+    std::string meshId;
 };

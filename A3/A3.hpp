@@ -64,6 +64,10 @@ protected:
     void renderSceneNode(const SceneNode &node);
     void renderArcCircle();
 
+    void UpdateSelectedNodeOffset(const float dx, const float dy, const SceneNode & pnode,
+                                      const bool rightclick, const bool middleclick);
+    void UpdateSelectedNodeOffsetVertical(const float dy, const SceneNode & pnode);
+    void UpdateSelectedNodeOffsetHorizontal(const float dx, const SceneNode & pnode);
     void ResetPosition();
     void ResetOrientation();
     void ResetJoints();
@@ -114,5 +118,5 @@ protected:
     float cursor_delta_x, cursor_delta_y, prev_xpos, prev_ypos;
     bool dx, dy, dz, mouse_button_active;
     bool *selected;
-    
+    glm::vec2 *joint_offsets;
 };

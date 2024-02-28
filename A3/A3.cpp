@@ -411,6 +411,12 @@ void A3::ResetOrientation() {
 }
 
 void A3::ResetJoints() {
+    if (joint_offsets) delete[] joint_offsets;
+    
+    joint_offsets = new vec2[m_rootNode->totalSceneNodes()];
+    for (unsigned int i = 0; i < m_rootNode->totalSceneNodes(); i++) {
+        joint_offsets[i] = vec2(0);
+    }
     app_reset_joints = false;
 }
 
@@ -419,7 +425,7 @@ void A3::ResetAll() {
     imode = InterationModes::P;
     mouse_button_active = dx = dy = dz = false;
     prev_xpos = cursor_delta_x = 0;
-    if ( selected ) delete selected;
+    if ( selected ) delete[] selected;
     do_picking = false;
     selected = new bool[m_rootNode->totalSceneNodes()];
     for (unsigned int i = 0; i < m_rootNode->totalSceneNodes(); i++) {
@@ -483,9 +489,9 @@ void A3::guiLogic()
         if (ImGui::BeginMenu("Application")) {
             ImGui::MenuItem("Reset Position    (I)", NULL, &app_reset_pos);
             ImGui::MenuItem("Reset Orientation (O)", NULL, &app_reset_ori);
-            ImGui::MenuItem("Reset Joints      (B)", NULL, &app_reset_joints);            
-            ImGui::MenuItem("Reset All         (B)", NULL, &app_reset_all);            
-            ImGui::MenuItem("Quit              (B)", NULL, &app_quit);            
+            ImGui::MenuItem("Reset Joints      (S)", NULL, &app_reset_joints);            
+            ImGui::MenuItem("Reset All         (A)", NULL, &app_reset_all);            
+            ImGui::MenuItem("Quit              (Q)", NULL, &app_quit);            
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Options")) {
@@ -502,17 +508,52 @@ void A3::guiLogic()
     ImGui::RadioButton( "Position/Orientation (P)##col", (int *)&imode, (int)InterationModes::P );
     ImGui::RadioButton( "Joints               (J)##col", (int *)&imode, (int)InterationModes::J );
     ImGui::PopID();
-         
-    // Create Button, and check if it was clicked:
-    if( ImGui::Button( "Quit Application" ) ) {
-        glfwSetWindowShouldClose(m_window, GL_TRUE);
-    }
-
+ 
     ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
     ImGui::End();
 
 }
+
+//----------------------------------------------------------------------------------------
+void A3::UpdateSelectedNodeOffset(const float dx, const float dy, const SceneNode & pnode,
+                                  const bool rightclick, const bool middleclick) {
+
+    if ( selected[pnode.m_nodeId] && pnode.selectable ) {
+        unsigned int parent_id = pnode.parent->m_nodeId;
+        const JointNode * joint_node = static_cast<const JointNode *>(pnode.parent);
+        JointNode::JointRange x_range = joint_node->m_joint_x;
+
+        //NOTE: Horizontal rotation offset
+        if (rightclick && pnode.head) {
+            float x_rotate_amount = x_range.init + joint_offsets[parent_id].x + dx;
+            if (x_rotate_amount <= x_range.max && x_rotate_amount >= x_range.min) {
+                joint_offsets[parent_id].x += dx;
+            }
+        } else if (middleclick && !pnode.head) {
+            float x_rotate_amount = x_range.init + joint_offsets[parent_id].x + dy;
+            if (x_rotate_amount <= x_range.max && x_rotate_amount >= x_range.min) {
+                joint_offsets[parent_id].x += dy;  
+            }  
+        }
+
+        //NOTE: Vertical rotation offset
+        if ( middleclick ) {
+            JointNode::JointRange y_range = joint_node->m_joint_y;
+            float y_rotate_amount = y_range.init + joint_offsets[parent_id].y + dy;
+            if (y_rotate_amount <= y_range.max && y_rotate_amount >= y_range.min) {
+                joint_offsets[parent_id].y += dy;
+            
+            }        
+        }
+    } // if ( selected ... )
+    
+    for (const SceneNode * cnode : pnode.children) {
+        UpdateSelectedNodeOffset(dx, dy, *cnode, rightclick, middleclick);
+    }
+
+}
+
 
 //----------------------------------------------------------------------------------------
 // Update mesh specific shader uniforms:
@@ -595,6 +636,8 @@ void A3::draw() {
         renderArcCircle();
 }
 
+// TODO: add undo/redo stack
+
 //----------------------------------------------------------------------------------------
 void A3::renderSceneGraph(const SceneNode & root) {
 
@@ -623,13 +666,33 @@ void A3::renderSceneGraph(const SceneNode & root) {
 
 //----------------------------------------------------------------------------------------
 void A3::renderSceneNode(const SceneNode & pnode) {
-
+    mat4 MX, MY;
     matrixStack.push(pnode.trans);
-    if (pnode.m_nodeType == NodeType::GeometryNode)
+    if (pnode.m_nodeType == NodeType::JointNode) {
+        const JointNode * joint_node = static_cast<const JointNode *>(&pnode);
+        JointNode::JointRange x_range = joint_node->m_joint_x;
+        JointNode::JointRange y_range = joint_node->m_joint_y;
+        float x_rotate_amount = x_range.init + joint_offsets[pnode.m_nodeId].x;
+        float y_rotate_amount = y_range.init + joint_offsets[pnode.m_nodeId].y;
+
+        /*
+        if (x_rotate_amount > x_range.max) x_rotate_amount = x_range.max;
+        if (x_rotate_amount < x_range.min) x_rotate_amount = x_range.min;
+        if (y_rotate_amount > y_range.max) y_rotate_amount = y_range.max;
+        if (y_rotate_amount < y_range.min) y_rotate_amount = y_range.min;
+        */
+        cout << y_rotate_amount << endl;
+
+        MX = rotate(mat4(1.), degreesToRadians(x_rotate_amount), vec3(0,1,0));
+        MY = rotate(mat4(1.), degreesToRadians(y_rotate_amount), vec3(1,0,0));
+        matrixStack.push(MX);
+        matrixStack.push(MY);
+    }
+    else if (pnode.m_nodeType == NodeType::GeometryNode)
     { 
         const GeometryNode * geometryNode = static_cast<const GeometryNode *>(&pnode);
         vec3 kd = geometryNode->material.kd;
-        if ( selected[pnode.m_nodeId] ) {
+        if ( selected[pnode.m_nodeId] && pnode.selectable ) {
             kd = glm::vec3( 1, 1, 0 );
         }
         
@@ -642,9 +705,15 @@ void A3::renderSceneNode(const SceneNode & pnode) {
         m_shader.enable();
         glDrawArrays(GL_TRIANGLES, batchInfo.startIndex, batchInfo.numIndices);
         m_shader.disable();
-    }
+    } // if
+    
     for (const SceneNode * cnode : pnode.children) {
         renderSceneNode(*cnode);
+    }
+    
+    if (pnode.m_nodeType == NodeType::JointNode) {
+        matrixStack.pop(MY);
+        matrixStack.pop(MX);
     }
     matrixStack.pop(pnode.trans);
 }
@@ -678,7 +747,10 @@ void A3::renderArcCircle() {
 void A3::cleanup()
 {
     if (selected) {
-        delete selected;
+        delete[] selected;
+    }
+    if (joint_offsets) {
+        delete[] joint_offsets;
     }
 }
 
@@ -743,7 +815,8 @@ bool A3::mouseMoveEvent (
                 break;
             }
             case InterationModes::J:
-                //TODO:: implement this
+                
+                UpdateSelectedNodeOffset(cursor_delta_x, cursor_delta_y, *m_rootNode, dy, dz);                
                 break;
         }
     }
@@ -772,7 +845,6 @@ bool A3::mouseButtonInputEvent (
                 if (imode == InterationModes::J) { // NOTE: this code is taken from PickingExample.cpp
                     
                     do_picking = true;
-                    // TODO: do_picking
                     double xpos, ypos;
                     glfwGetCursorPos( m_window, &xpos, &ypos );
                     
@@ -873,7 +945,7 @@ bool A3::keyInputEvent (
         int action,
         int mods
 ) {
-    bool eventHandled(false);
+    bool eventHandled(true);
 
     if( action == GLFW_PRESS ) {
         if( key == GLFW_KEY_M ) {
@@ -881,6 +953,26 @@ bool A3::keyInputEvent (
             eventHandled = true;
         } else if (key == GLFW_KEY_Q) {
             glfwSetWindowShouldClose(m_window, GL_TRUE);
+        } else if (key == GLFW_KEY_I ) {
+            ResetPosition();
+        } else if (key == GLFW_KEY_O ) {
+            ResetOrientation();
+        } else if (key == GLFW_KEY_S ) {
+            ResetJoints();
+        } else if (key == GLFW_KEY_A ) {
+            ResetAll();
+        } else if (key == GLFW_KEY_C ) {
+            opt_show_circle = opt_show_circle ? false : true;
+        } else if (key == GLFW_KEY_Z ) {
+            opt_show_zbuf = opt_show_zbuf ? false : true;
+        } else if (key == GLFW_KEY_B ) {
+            opt_show_bf_culling = opt_show_bf_culling ? false : true;
+        } else if (key == GLFW_KEY_F ) {
+            opt_show_ff_culling = opt_show_ff_culling ? false : true;
+        } else if (key == GLFW_KEY_P ) {
+            imode = InterationModes::P;
+        } else if (key == GLFW_KEY_J ) {
+            imode = InterationModes::J;
         }
     }
     // Fill in with event handling code...
