@@ -1,0 +1,32 @@
+To run this program under cs488
+cd A3
+premake4 gmake
+make
+./A3 Assets/puppet.lua
+
+This program is tested on vm
+
+
+hierarchiccal model:
+
+               LeftEye  -  RighEye
+                        |
+		     NeckJoint
+		        |
+		      Neck
+		        |
+		      Torso
+		        |
+		     Sholders
+		        |
+      LeftUpperArmJoint - RightUpperArmJoint
+             |                    |
+        LeftUpperArm         RightUpperArm
+	     |                    |
+       LeftElbowJoint       RightElbowJoint
+             |                    |
+       LeftForeArm          RightForeArm
+             |                    |
+       LeftHand                RightHand
+
+

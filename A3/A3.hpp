@@ -73,6 +73,9 @@ protected:
     void ResetJoints();
     void ResetAll();
     void Quit();
+    void SaveJointStates();
+    void Undo();
+    void Redo();
     
     glm::mat4 m_perpsective;
     glm::mat4 m_view;
@@ -119,4 +122,8 @@ protected:
     bool dx, dy, dz, mouse_button_active;
     bool *selected;
     glm::vec2 *joint_offsets;
+
+    glm::vec2 *old_joint_states;
+    std::vector<glm::vec2 *> undo_stack;
+    std::vector<glm::vec2 *> redo_stack;
 };

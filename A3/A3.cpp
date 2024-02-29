@@ -25,6 +25,22 @@ static MatrixStack matrixStack;
 
 static bool do_picking = false;
 
+//----------------------------------------------------------------------------------------
+void ClearStack(vector<vec2 *> *stack) {
+    if (stack->empty()) return;
+    for (int i = 0; i < stack->size(); i++) {
+        delete stack->back();
+        stack->pop_back();
+    }
+}
+
+//----------------------------------------------------------------------------------------
+void deepcopyarr(vec2 *dest, vec2 *src, unsigned int len) {
+    for (unsigned int i = 0; i < len; i++) {
+        dest[i] = src[i];
+    }
+}
+
 /*******************************************************
  * NOTE: this code is taken from trackball.c in Trackball_Example 
  * void vCalcRotVec(float fNewX, float fNewY, 
@@ -412,10 +428,14 @@ void A3::ResetOrientation() {
 
 void A3::ResetJoints() {
     if (joint_offsets) delete[] joint_offsets;
-    
+    if (old_joint_states) delete[] old_joint_states;
+    ClearStack(&undo_stack);
+    ClearStack(&redo_stack);
+    old_joint_states = new vec2[m_rootNode->totalSceneNodes()];
     joint_offsets = new vec2[m_rootNode->totalSceneNodes()];
     for (unsigned int i = 0; i < m_rootNode->totalSceneNodes(); i++) {
         joint_offsets[i] = vec2(0);
+        old_joint_states[i] = vec2(0);
     }
     app_reset_joints = false;
 }
@@ -442,6 +462,33 @@ void A3::Quit() {
     glfwSetWindowShouldClose(m_window, GL_TRUE);
 }
 
+void A3::Undo() {
+    if (!undo_stack.empty()) {
+        unsigned int len = m_rootNode->totalSceneNodes();
+        vec2 * states = new vec2(len);
+        deepcopyarr(states, joint_offsets, len);
+        redo_stack.push_back(states);
+        deepcopyarr(joint_offsets, undo_stack.back(), len);
+        cout << " undo del" << endl;
+        if (undo_stack.back()) delete[] undo_stack.back();
+        cout << " undo del end" << endl;
+        undo_stack.pop_back();
+    }
+}
+ 
+void A3::Redo() {
+    if (!redo_stack.empty()) {
+        unsigned int len = m_rootNode->totalSceneNodes();
+        vec2 * states = new vec2(len);
+        deepcopyarr(states, joint_offsets, len);
+        undo_stack.push_back(states);
+        deepcopyarr(joint_offsets, redo_stack.back(), len);
+        cout << " redo del" << endl;
+        if (redo_stack.back()) delete[] undo_stack.back();
+        cout << " redo del end" << endl;
+        redo_stack.pop_back();
+    }
+}
 
 //----------------------------------------------------------------------------------------
 /*
@@ -494,6 +541,17 @@ void A3::guiLogic()
             ImGui::MenuItem("Quit              (Q)", NULL, &app_quit);            
             ImGui::EndMenu();
         }
+
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Undo (U)")) {
+                Undo();
+            }
+            if (ImGui::MenuItem("Redo (R)")) {
+                Redo();
+            }
+            ImGui::EndMenu();
+        }
+        
         if (ImGui::BeginMenu("Options")) {
             ImGui::MenuItem("Circle            (C)", NULL, &opt_show_circle);
             ImGui::MenuItem("Z-buffer          (Z)", NULL, &opt_show_zbuf);
@@ -605,6 +663,8 @@ static void updateShaderUniforms(
 
 }
 
+bool once = true;
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, after guiLogic().
@@ -625,9 +685,14 @@ void A3::draw() {
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT_AND_BACK);
     }
+#if 0
+    if (once) {
+        once = false;
+        renderSceneGraph(*m_rootNode);
+    }
+#else
     renderSceneGraph(*m_rootNode);
-
-
+#endif
     if (opt_show_bf_culling || opt_show_ff_culling) {
         glDisable(GL_CULL_FACE);
     }
@@ -646,27 +711,32 @@ void A3::renderSceneGraph(const SceneNode & root) {
 
     mat4 T = translate(mat4(1.), model_translation);
     
-    matrixStack.push(root.trans);
-    matrixStack.push(T);
-    matrixStack.push(trackball_rots);
-
+    matrixStack.push(root.trans * T * trackball_rots);
+    
     
     for (const SceneNode * cnode : root.children) {
         renderSceneNode(*cnode);
     }
 
-    matrixStack.pop(trackball_rots);
-    matrixStack.pop(T);
-    matrixStack.pop(root.trans);
+    matrixStack.pop(root.trans * T * trackball_rots);
     
     glBindVertexArray(0);
     CHECK_GL_ERRORS;
     
 }
 
+void printmat4(mat4 mat) {
+    for (int col = 0; col < 4; col++) {
+        for (int row = 0; row < 4; row++) {
+            cout << mat[col][row] << "\t";
+        }
+        cout << endl;
+    }
+}
+
 //----------------------------------------------------------------------------------------
 void A3::renderSceneNode(const SceneNode & pnode) {
-    mat4 MX, MY;
+    mat4 M(1.);
     matrixStack.push(pnode.trans);
     if (pnode.m_nodeType == NodeType::JointNode) {
         const JointNode * joint_node = static_cast<const JointNode *>(&pnode);
@@ -675,18 +745,8 @@ void A3::renderSceneNode(const SceneNode & pnode) {
         float x_rotate_amount = x_range.init + joint_offsets[pnode.m_nodeId].x;
         float y_rotate_amount = y_range.init + joint_offsets[pnode.m_nodeId].y;
 
-        /*
-        if (x_rotate_amount > x_range.max) x_rotate_amount = x_range.max;
-        if (x_rotate_amount < x_range.min) x_rotate_amount = x_range.min;
-        if (y_rotate_amount > y_range.max) y_rotate_amount = y_range.max;
-        if (y_rotate_amount < y_range.min) y_rotate_amount = y_range.min;
-        */
-        cout << y_rotate_amount << endl;
-
-        MX = rotate(mat4(1.), degreesToRadians(x_rotate_amount), vec3(0,1,0));
-        MY = rotate(mat4(1.), degreesToRadians(y_rotate_amount), vec3(1,0,0));
-        matrixStack.push(MX);
-        matrixStack.push(MY);
+        M = rotate(M, degreesToRadians(x_rotate_amount), vec3(0,1,0));
+        M = rotate(M, degreesToRadians(y_rotate_amount), vec3(1,0,0));
     }
     else if (pnode.m_nodeType == NodeType::GeometryNode)
     { 
@@ -695,7 +755,7 @@ void A3::renderSceneNode(const SceneNode & pnode) {
         if ( selected[pnode.m_nodeId] && pnode.selectable ) {
             kd = glm::vec3( 1, 1, 0 );
         }
-        
+
         updateShaderUniforms(pnode.m_nodeId, m_shader, *geometryNode, m_view, matrixStack.M, kd);
 
         // Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
@@ -706,15 +766,11 @@ void A3::renderSceneNode(const SceneNode & pnode) {
         glDrawArrays(GL_TRIANGLES, batchInfo.startIndex, batchInfo.numIndices);
         m_shader.disable();
     } // if
-    
+    matrixStack.push(M);
     for (const SceneNode * cnode : pnode.children) {
         renderSceneNode(*cnode);
     }
-    
-    if (pnode.m_nodeType == NodeType::JointNode) {
-        matrixStack.pop(MY);
-        matrixStack.pop(MX);
-    }
+    matrixStack.pop(M);
     matrixStack.pop(pnode.trans);
 }
 
@@ -752,6 +808,11 @@ void A3::cleanup()
     if (joint_offsets) {
         delete[] joint_offsets;
     }
+    if (old_joint_states) {
+        delete[] old_joint_states;
+    }
+    ClearStack(&undo_stack);
+    ClearStack(&redo_stack);
 }
 
 //----------------------------------------------------------------------------------------
@@ -893,9 +954,11 @@ bool A3::mouseButtonInputEvent (
                 break;
             case GLFW_MOUSE_BUTTON_RIGHT:
                 dy = true;
+                if (imode == InterationModes::J) SaveJointStates();
                 break;
             case GLFW_MOUSE_BUTTON_MIDDLE:
                 dz = true;
+                if (imode == InterationModes::J) SaveJointStates();
                 break;
         }
     }
@@ -903,6 +966,24 @@ bool A3::mouseButtonInputEvent (
     if (actions == GLFW_RELEASE) {
         mouse_button_active = false;
         dx = dy = dz = false;
+        if (imode == InterationModes::J) {
+            switch (button) {
+                case GLFW_MOUSE_BUTTON_MIDDLE: {
+                    vec2 * states = new vec2(m_rootNode->totalSceneNodes());
+                    deepcopyarr(states, old_joint_states, m_rootNode->totalSceneNodes());
+                    undo_stack.push_back(states);
+                    ClearStack(&redo_stack);
+                    break;
+                }
+                case GLFW_MOUSE_BUTTON_RIGHT: {
+                    vec2 * states = new vec2(m_rootNode->totalSceneNodes());
+                    deepcopyarr(states, old_joint_states, m_rootNode->totalSceneNodes());
+                    undo_stack.push_back(states);
+                    ClearStack(&redo_stack);
+                    break;
+                }
+            }
+        }
     }
 
     return eventHandled;
@@ -973,9 +1054,20 @@ bool A3::keyInputEvent (
             imode = InterationModes::P;
         } else if (key == GLFW_KEY_J ) {
             imode = InterationModes::J;
+        } else if (key == GLFW_KEY_R ) {
+            Redo();
+        } else if (key == GLFW_KEY_U ) {
+            Undo();
         }
     }
     // Fill in with event handling code...
 
     return eventHandled;
+}
+
+void A3::SaveJointStates() {
+    unsigned int len = m_rootNode->totalSceneNodes();
+    for (unsigned int i = 0; i < len; i++) {
+        old_joint_states[i] = joint_offsets[i];
+    }
 }
