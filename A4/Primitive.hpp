@@ -4,9 +4,12 @@
 
 #include <glm/glm.hpp>
 
+enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, };
+
 class Primitive {
 public:
-  virtual ~Primitive();
+    PrimitiveType type;
+    virtual ~Primitive();
 };
 
 class Sphere : public Primitive {
@@ -21,15 +24,22 @@ public:
 
 class NonhierSphere : public Primitive {
 public:
-  NonhierSphere(const glm::vec3& pos, double radius)
-    : m_pos(pos), m_radius(radius)
-  {
-  }
-  virtual ~NonhierSphere();
+    NonhierSphere(const glm::vec3& pos, double radius)
+            : m_pos(pos), m_radius(radius)
+    {
+        type = PrimitiveType::NHSPHERE;
+    }
+
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d,
+             glm::vec3 & normal, glm::vec3 & hit_point, float & min_t);
+
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    
+    virtual ~NonhierSphere();
 
 private:
-  glm::vec3 m_pos;
-  double m_radius;
+    glm::vec3 m_pos;
+    double m_radius;
 };
 
 class NonhierBox : public Primitive {
