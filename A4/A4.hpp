@@ -8,8 +8,10 @@
 #include "Light.hpp"
 #include "Image.hpp"
 
+
+
 struct Ray {
-    glm::vec4 origin, direction;
+    glm::vec3 origin, direction;
 };
 
 void A4_Render(
