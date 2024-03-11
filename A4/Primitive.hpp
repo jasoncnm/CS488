@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, };
+enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, };
 
 class Primitive {
 public:
@@ -47,10 +47,12 @@ public:
   NonhierBox(const glm::vec3& pos, double size)
     : m_pos(pos), m_size(size)
   {
+      type = PrimitiveType::NHBOX;
   }
 
     bool Hit(const glm::vec3 & e, const glm::vec3 & d,
              glm::vec3 & normal, glm::vec3 & hit_point, float & min_t);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
   
   virtual ~NonhierBox();
 

@@ -44,7 +44,20 @@ static bool Hit(SceneNode * root, vec3 & kd, vec3 & ks,
                     }
                     break;
                 }
+                case PrimitiveType::NHBOX: {
+                    NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
+                    vec3 e = ray.origin;
+                    vec3 d = ray.direction;
+                    if (box->Hit(e, d, normal, hit_point, min_t)) {
+                        hit = true;
+                        PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
+                        kd = mat->getkd();
+                        ks = mat->getks();
+                        shininess = mat->getshininess();                
+                    }
 
+                    break;
+                }
                 default:
                     break;
             } // switch
@@ -69,6 +82,17 @@ static bool Hit(SceneNode * root, Ray & ray) {
                     }
                     break;
                 }
+                case PrimitiveType::NHBOX: {
+                    NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
+                    vec3 e = ray.origin;
+                    vec3 d = ray.direction;
+                    if (box->Hit(e, d)) {
+                        return true;
+                    }                    
+                    break;
+                }
+
+                    
             }
         }
     }
@@ -119,18 +143,19 @@ static vec3 RayColour(
     if (Hit(root, kd, ks, shininess, ray, normal, hit_point)) {
         colour = kd * ambient;
         for (const Light * light : lights) {
-            colour +=  DirectLight(root, hit_point, normal,
-                                   kd, ks, hit_point - eye,
-                                   shininess, light);
+            colour +=  0.8f * DirectLight(root, hit_point, normal,
+                                          kd, ks, eye - hit_point,
+                                          shininess, light);
             
         }
+
 #if 1
         // TODO: DEBUG THIS !!!!
         if (maxhit < 8) {
             maxhit += 1;
             ray.origin = hit_point;
             ray.direction = normalize(Reflect(ray.direction, normal));
-            colour += 0.25f * ks * RayColour(root, ray, maxhit, ambient, eye, lights);
+            colour += 0.5f * ks * RayColour(root, ray, maxhit, ambient, eye, lights);
         }
 #endif        
     }
@@ -205,6 +230,9 @@ void A4_Render(
             
             colour = RayColour(root, ray, 0, ambient, eye, lights);
 
+            colour.x = clamp(colour.x, 0.0f, 1.0f);
+            colour.y = clamp(colour.y, 0.0f, 1.0f);
+            colour.z = clamp(colour.z, 0.0f, 1.0f);
             if (colour.z > mx.z) mx = colour;
             
             image(x, y, 0) = colour.x;
