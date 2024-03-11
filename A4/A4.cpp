@@ -11,8 +11,8 @@ using namespace glm;
 typedef unsigned int uint;
 
 static vec3 Reflect(vec3 d, vec3 n) {
-    vec3 result = d - 2 * dot(d, n) * n;
 
+    vec3 result = d - 2 * dot(d, n) * n;
 #if 0
     float cos1 = dot(-d, n) / (length(-d) * length(n));
     float cos2 = dot(result, n) / (length(result) * length(n));
@@ -75,6 +75,7 @@ static bool Hit(SceneNode * root, Ray & ray) {
     return false;
 }
 
+
 static vec3 DirectLight(SceneNode * root,
                         const vec3 & pos,
                         const vec3 & normal,
@@ -87,10 +88,15 @@ static vec3 DirectLight(SceneNode * root,
     vec3 shadow_e = pos;
     vec3 shadow_d = normalize(light->position - pos);
     Ray shadow_ray = {pos, shadow_d};
-    vec3 h = normalize(v + shadow_d);
+    vec3 h = normalize(normalize(v) + normalize(shadow_d));
     if (!Hit(root, shadow_ray)) {
-        
-        result += kd * max(0.0f, dot(normal, shadow_d)) * light->colour
+        // double r = length(light->position - pos);
+        // double attenuation = 1.0 / ( light->falloff[0] + light->falloff[1] * r + light->falloff[2] * r * r );
+#if 0
+        result = kd * max(0.0f, dot(normal, shadow_d)) * light->colour * attenuation
+            + ks * pow(max(0.0f, dot(normal, h)), shininess) * light->colour * attenuation;
+#endif
+        result = kd * max(0.0f, dot(normal, shadow_d)) * light->colour
             + ks * pow(max(0.0f, dot(normal, h)), shininess) * light->colour;
         
         // result += kd * light->colour;
@@ -98,12 +104,12 @@ static vec3 DirectLight(SceneNode * root,
     return result;
 }
 
-
 static vec3 RayColour(
     SceneNode * root,
     Ray & ray,
     uint maxhit,
     const vec3 ambient,
+    const vec3 eye,
     const std::list<Light *> & lights)
 {
     vec3 colour = vec3(0.2, 0.2, 0.3);
@@ -113,16 +119,18 @@ static vec3 RayColour(
     if (Hit(root, kd, ks, shininess, ray, normal, hit_point)) {
         colour = kd * ambient;
         for (const Light * light : lights) {
-            colour += DirectLight(root, hit_point, normal,
-                                  kd, ks, ray.direction,
-                                  shininess, light);            
+            colour +=  DirectLight(root, hit_point, normal,
+                                   kd, ks, hit_point - eye,
+                                   shininess, light);
+            
         }
 #if 1
         // TODO: DEBUG THIS !!!!
         if (maxhit < 8) {
             maxhit += 1;
+            ray.origin = hit_point;
             ray.direction = normalize(Reflect(ray.direction, normal));
-            colour += ks * RayColour(root, ray, maxhit, ambient, lights);
+            colour += 0.25f * ks * RayColour(root, ray, maxhit, ambient, eye, lights);
         }
 #endif        
     }
@@ -195,8 +203,10 @@ void A4_Render(
                 int a = 0;
             }
             
-            colour = RayColour(root, ray, 0, ambient, lights);
+            colour = RayColour(root, ray, 0, ambient, eye, lights);
+
             if (colour.z > mx.z) mx = colour;
+            
             image(x, y, 0) = colour.x;
             image(x, y, 1) = colour.y;
             image(x, y, 2) = colour.z;

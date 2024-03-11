@@ -3,7 +3,7 @@
 #include "Primitive.hpp"
 #include "polyroots.hpp"
 
-const static float minhit = 0.01f;
+const static float minhit = 0.05f;
 
 
 Primitive::~Primitive()
@@ -20,6 +20,11 @@ Cube::~Cube()
 
 NonhierSphere::~NonhierSphere()
 {
+}
+
+bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d, glm::vec3 & normal,
+                     glm::vec3 & hit_point, float & min_t) {
+
 }
 
 bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, glm::vec3 & normal,

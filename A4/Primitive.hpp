@@ -48,6 +48,9 @@ public:
     : m_pos(pos), m_size(size)
   {
   }
+
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d,
+             glm::vec3 & normal, glm::vec3 & hit_point, float & min_t);
   
   virtual ~NonhierBox();
 
