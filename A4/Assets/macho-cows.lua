@@ -52,7 +52,7 @@ cow_poly:scale(factor, factor, factor)
 cow_poly:translate(0.0, -1.0, 0.0)
 
 -- ##############################################
--- the scene
+-- The Scene
 -- ##############################################
 
 scene = gr.node('scene')

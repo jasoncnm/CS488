@@ -58,7 +58,7 @@ Mesh::Mesh( const std::string& fname )
 
 #ifdef RENDER_BOUNDING_VOLUMES
 // TODO: DEBUG THIS !!!!!!!!!!
-bool BoundSphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+bool BoundSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record) {
     bool hit = false;
     glm::vec3 c(0);
     double A = glm::dot(d,d);
@@ -68,9 +68,23 @@ bool BoundSphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     size_t n_roots;
     n_roots = quadraticRoots( A, B, C, roots);
     if (n_roots > 0 && n_roots <= 2) {
+#if 1
+        
+        for(int i = 0; i < n_roots; i++) {
+            if (roots[i] < record.t && roots[i] > minhit) {
+                hit = true;
+                record.t = roots[i];
+                glm::vec3 p = e + (record.t * d);
+                record.normal = (2.0f * (p - c));
+                record.hit_point = p;
+            }
+        }
+#else
+        
         if (roots[1] > minhit || roots[2] > minhit) {
             hit = true;
         }
+#endif
     }
     return hit;
 }
@@ -88,8 +102,10 @@ bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir,
                HitRecord & record) {
 
 #ifdef RENDER_BOUNDING_VOLUMES
-    if (!bound_sphere.Hit(e, dir)) {
+    if (!bound_sphere.Hit(e, dir, record)) {
         return false;
+    } else {
+        return true;
     }
 #endif
     

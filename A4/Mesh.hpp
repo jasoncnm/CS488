@@ -19,7 +19,9 @@
 // TODO: DEBUG THIS !!!!!!!!!!
 struct BoundSphere {
     double r;
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+//    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
+
 };
 #endif
 

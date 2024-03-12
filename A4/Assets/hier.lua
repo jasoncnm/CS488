@@ -33,7 +33,7 @@ s:scale(4, 0.6, 0.6)
 s:translate(0, 4, 0)
 
 -- the floor
-plane = gr.mesh( 'plane', 'Assets/plane.obj' )
+plane = gr.mesh( 'floor', 'Assets/plane.obj' )
 scene:add_child(plane)
 plane:set_material(grass)
 plane:scale(30, 30, 30)
