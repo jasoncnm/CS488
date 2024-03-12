@@ -13,7 +13,15 @@
 // Use this #define to selectively compile your code to render the
 // bounding boxes around your mesh objects. Uncomment this option
 // to turn it on.
-//#define RENDER_BOUNDING_VOLUMES
+// #define RENDER_BOUNDING_VOLUMES
+
+#ifdef RENDER_BOUNDING_VOLUMES
+// TODO: DEBUG THIS !!!!!!!!!!
+struct BoundSphere {
+    double r;
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+};
+#endif
 
 struct Triangle
 {
@@ -22,9 +30,9 @@ struct Triangle
     size_t v3;
 
     Triangle( size_t pv1, size_t pv2, size_t pv3 )
-        : v1( pv1 )
-        , v2( pv2 )
-        , v3( pv3 )
+            : v1( pv1 )
+            , v2( pv2 )
+            , v3( pv3 )
     {}
 };
 
@@ -38,6 +46,8 @@ public:
 private:
     std::vector<glm::vec3> m_vertices;
     std::vector<Triangle> m_faces;
-
+#ifdef RENDER_BOUNDING_VOLUMES
+    BoundSphere bound_sphere;
+#endif 
     friend std::ostream& operator<<(std::ostream& out, const Mesh& mesh);
 };

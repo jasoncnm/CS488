@@ -7,6 +7,7 @@
 
 // #include "cs488-framework/ObjFileDecoder.hpp"
 #include "Mesh.hpp"
+#include "polyroots.hpp"
 
 const static float minhit = 0.05f;
 const static float tol = 0.0001f;
@@ -21,6 +22,26 @@ Mesh::Mesh( const std::string& fname )
     double vx, vy, vz;
     size_t s1, s2, s3;
 
+#ifdef RENDER_BOUNDING_VOLUMES
+    glm::vec3 center(0);
+    double radius = 0;    
+    std::ifstream ifs( fname.c_str() );
+    while( ifs >> code ) {
+        if( code == "v" ) {
+            ifs >> vx >> vy >> vz;
+            glm::vec3 p(vx, vy, vz);
+            double dist = glm::distance(p, glm::vec3(0));
+            radius = dist > radius ? dist : radius; 
+            m_vertices.push_back( p );
+        } else if( code == "f" ) {
+            ifs >> s1 >> s2 >> s3;
+            m_faces.push_back( Triangle( s1 - 1, s2 - 1, s3 - 1 ) );
+        }
+    }
+    bound_sphere.r = radius;
+    
+#else
+
     std::ifstream ifs( fname.c_str() );
     while( ifs >> code ) {
         if( code == "v" ) {
@@ -31,9 +52,31 @@ Mesh::Mesh( const std::string& fname )
             m_faces.push_back( Triangle( s1 - 1, s2 - 1, s3 - 1 ) );
         }
     }
+    
+#endif
 }
 
-#if 1
+#ifdef RENDER_BOUNDING_VOLUMES
+// TODO: DEBUG THIS !!!!!!!!!!
+bool BoundSphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+    bool hit = false;
+    glm::vec3 c(0);
+    double A = glm::dot(d,d);
+    double B = glm::dot(2.0f * d, e - c);
+    double C = glm::dot(e - c, e - c) - (r * r);
+    double roots[2];
+    size_t n_roots;
+    n_roots = quadraticRoots( A, B, C, roots);
+    if (n_roots > 0 && n_roots <= 2) {
+        if (roots[1] > minhit || roots[2] > minhit) {
+            hit = true;
+        }
+    }
+    return hit;
+}
+#endif
+
+
 bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     HitRecord rec;
     rec.t = FLT_MAX;
@@ -41,7 +84,15 @@ bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     
 }
 
-bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir, HitRecord & record) {
+bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir,
+               HitRecord & record) {
+
+#ifdef RENDER_BOUNDING_VOLUMES
+    if (!bound_sphere.Hit(e, dir)) {
+        return false;
+    }
+#endif
+    
     bool hit = false;
     glm::vec3 A, B, C, R, P0, P1, P2;
     float t, beta, gamma, d, d1, d2, d3;
@@ -49,7 +100,7 @@ bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir, HitRecord & record) {
         P0 = m_vertices[face.v1];
         P1 = m_vertices[face.v2];
         P2 = m_vertices[face.v3];
-        // TODO: triangle intersection!!!!
+        // NOTE: triangle intersection!!!!
         R = P0 - e;
         A = P0 - P1;
         B = P0 - P2;
@@ -75,7 +126,7 @@ bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir, HitRecord & record) {
     }
     return hit;
 }
-#endif 
+
 std::ostream& operator<<(std::ostream& out, const Mesh& mesh)
 {
   out << "mesh {";

@@ -17,12 +17,26 @@ public:
 
 class Sphere : public Primitive {
 public:
-  virtual ~Sphere();
+
+    Sphere() {
+        type = PrimitiveType::SPHERE;
+    }
+    
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    virtual ~Sphere();
+    
 };
 
 class Cube : public Primitive {
 public:
-  virtual ~Cube();
+    Cube() {
+        type = PrimitiveType::CUBE;
+    }
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    virtual ~Cube();
+    
 };
 
 class NonhierSphere : public Primitive {
