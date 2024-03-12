@@ -5,7 +5,7 @@
 #include "A4.hpp"
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
-
+#include "Mesh.hpp"
 using namespace glm;
 
 typedef unsigned int uint;
@@ -22,10 +22,8 @@ static vec3 Reflect(vec3 d, vec3 n) {
     return result;
 }
 
-static bool Hit(SceneNode * root, vec3 & kd, vec3 & ks,
-                double & shininess, Ray & ray, vec3 & normal, vec3 & hit_point) {
+static bool Hit(SceneNode * root, Ray & ray, HitRecord & record) {
     bool hit = false;
-    float min_t = FLT_MAX;
     for (SceneNode * node : root->children) {
 
         if (node->m_nodeType == NodeType::GeometryNode) {
@@ -35,12 +33,12 @@ static bool Hit(SceneNode * root, vec3 & kd, vec3 & ks,
                     NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
                     vec3 e = ray.origin;
                     vec3 d = ray.direction;
-                    if (sphere->Hit(e, d, normal, hit_point, min_t)) {
+                    if (sphere->Hit(e, d, record)) {
                         hit = true;
                         PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
-                        kd = mat->getkd();
-                        ks = mat->getks();
-                        shininess = mat->getshininess();                
+                        record.kd = mat->getkd();
+                        record.ks = mat->getks();
+                        record.shininess = mat->getshininess();
                     }
                     break;
                 }
@@ -48,16 +46,30 @@ static bool Hit(SceneNode * root, vec3 & kd, vec3 & ks,
                     NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
                     vec3 e = ray.origin;
                     vec3 d = ray.direction;
-                    if (box->Hit(e, d, normal, hit_point, min_t)) {
+                    if (box->Hit(e, d, record)) {
                         hit = true;
                         PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
-                        kd = mat->getkd();
-                        ks = mat->getks();
-                        shininess = mat->getshininess();                
+                        record.kd = mat->getkd();
+                        record.ks = mat->getks();
+                        record.shininess = mat->getshininess();                
                     }
 
                     break;
                 }
+                case PrimitiveType::MESH: {
+                    Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
+                    vec3 e = ray.origin;
+                    vec3 d = ray.direction;
+                    if (mesh->Hit(e, d, record)) {
+                        hit = true;
+                        PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
+                        record.kd = mat->getkd();
+                        record.ks = mat->getks();
+                        record.shininess = mat->getshininess();                
+                    }
+                    break;
+                }
+                    
                 default:
                     break;
             } // switch
@@ -91,8 +103,15 @@ static bool Hit(SceneNode * root, Ray & ray) {
                     }                    
                     break;
                 }
-
-                    
+                case PrimitiveType::MESH: {
+                    Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
+                    vec3 e = ray.origin;
+                    vec3 d = ray.direction;
+                    if (mesh->Hit(e, d)) {
+                        return true;
+                    }
+                    break;
+                }   
             }
         }
     }
@@ -101,29 +120,25 @@ static bool Hit(SceneNode * root, Ray & ray) {
 
 
 static vec3 DirectLight(SceneNode * root,
-                        const vec3 & pos,
-                        const vec3 & normal,
-                        const vec3 & kd,
-                        const vec3 & ks,
                         const vec3 & v,
-                        double & shininess,
+                        HitRecord & record,
                         const Light * light) {
     vec3 result(0);
-    vec3 shadow_e = pos;
-    vec3 shadow_d = normalize(light->position - pos);
-    Ray shadow_ray = {pos, shadow_d};
+    vec3 shadow_e = record.hit_point;
+    vec3 shadow_d = normalize(light->position - record.hit_point);
+    Ray shadow_ray = {record.hit_point, shadow_d};
     vec3 h = normalize(normalize(v) + normalize(shadow_d));
     if (!Hit(root, shadow_ray)) {
         // double r = length(light->position - pos);
         // double attenuation = 1.0 / ( light->falloff[0] + light->falloff[1] * r + light->falloff[2] * r * r );
 #if 0
-        result = kd * max(0.0f, dot(normal, shadow_d)) * light->colour * attenuation
-            + ks * pow(max(0.0f, dot(normal, h)), shininess) * light->colour * attenuation;
+        result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour * attenuation
+            + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour * attenuation;
 #endif
-        result = kd * max(0.0f, dot(normal, shadow_d)) * light->colour
-            + ks * pow(max(0.0f, dot(normal, h)), shininess) * light->colour;
+        result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour
+            + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour;
         
-        // result += kd * light->colour;
+        // result += record.kd * light->colour;
     }
     return result;
 }
@@ -136,16 +151,14 @@ static vec3 RayColour(
     const vec3 eye,
     const std::list<Light *> & lights)
 {
-    vec3 colour = vec3(0.2, 0.2, 0.3);
-    vec3 kd, ks, normal, hit_point;
-    double shininess;
+    vec3 colour;
+
+    HitRecord record = { FLT_MAX, vec3(0), vec3(0), vec3(0), vec3(0), 0.0 };  
     
-    if (Hit(root, kd, ks, shininess, ray, normal, hit_point)) {
-        colour = kd * ambient;
+    if (Hit(root, ray, record)) {
+        colour = record.kd * ambient;
         for (const Light * light : lights) {
-            colour +=  0.8f * DirectLight(root, hit_point, normal,
-                                          kd, ks, eye - hit_point,
-                                          shininess, light);
+            colour +=  0.8f * DirectLight(root, eye - record.hit_point, record, light);
             
         }
 
@@ -153,11 +166,15 @@ static vec3 RayColour(
         // TODO: DEBUG THIS !!!!
         if (maxhit < 8) {
             maxhit += 1;
-            ray.origin = hit_point;
-            ray.direction = normalize(Reflect(ray.direction, normal));
-            colour += 0.5f * ks * RayColour(root, ray, maxhit, ambient, eye, lights);
+            ray.origin = record.hit_point;
+            ray.direction = normalize(Reflect(ray.direction, record.normal));
+            colour += 0.5f * record.ks * RayColour(root, ray, maxhit, ambient, eye, lights);
         }
 #endif        
+    } else {
+        // NOTE: BG colour
+        float y = ray.direction.y;
+        colour += (1.0 - y) * vec3(0.039, 0.106, 0.722) + y * vec3(0.0, 0.0, 0.0);
     }
     return colour;
 }

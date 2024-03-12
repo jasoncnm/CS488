@@ -38,7 +38,7 @@ s5:set_material(mat1)
 
 -- A small stellated dodecahedron.
 
-steldodec = gr.mesh( 'dodec', 'smstdodeca.obj' )
+steldodec = gr.mesh( 'dodec', 'Assets/smstdodeca.obj' )
 steldodec:set_material(mat3)
 scene:add_child(steldodec)
 

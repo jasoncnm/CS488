@@ -4,6 +4,9 @@
 
 #include <glm/glm.hpp>
 
+#include "Hit_Record.hpp"
+
+
 enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, };
 
 class Primitive {
@@ -30,9 +33,7 @@ public:
         type = PrimitiveType::NHSPHERE;
     }
 
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d,
-             glm::vec3 & normal, glm::vec3 & hit_point, float & min_t);
-
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
     bool Hit(const glm::vec3 & e, const glm::vec3 & d);
     
     virtual ~NonhierSphere();
@@ -50,8 +51,7 @@ public:
       type = PrimitiveType::NHBOX;
   }
 
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d,
-             glm::vec3 & normal, glm::vec3 & hit_point, float & min_t);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
     bool Hit(const glm::vec3 & e, const glm::vec3 & d);
   
   virtual ~NonhierBox();
