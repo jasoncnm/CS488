@@ -174,7 +174,7 @@ static vec3 RayColour(
     } else {
         // NOTE: BG colour
         float y = ray.direction.y;
-        colour += (1.0 - y) * vec3(0.039, 0.106, 0.722) + y * vec3(0.0, 0.0, 0.0);
+        colour += (1.0 - y) * vec3(0.722, 0.306, 0.039) + y * vec3(0.0, 0.0, 0.0);
     }
     return colour;
 }
