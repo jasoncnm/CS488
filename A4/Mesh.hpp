@@ -12,14 +12,13 @@
 
 // Use this #define to selectively compile your code to render the
 // bounding boxes around your mesh objects. Uncomment this option
-// to turn it on.
-// #define RENDER_BOUNDING_VOLUMES
+// to turn it on. 
+#define RENDER_BOUNDING_VOLUMES  //NOTE: When compile with -O2, enable this does not render nonhier.lua properly
 
 #ifdef RENDER_BOUNDING_VOLUMES
-// TODO: DEBUG THIS !!!!!!!!!!
-struct BoundSphere {
-    double r;
-//    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+struct BoundBox {
+    glm::vec3 min, max;
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
     bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
 
 };
@@ -49,7 +48,7 @@ private:
     std::vector<glm::vec3> m_vertices;
     std::vector<Triangle> m_faces;
 #ifdef RENDER_BOUNDING_VOLUMES
-    BoundSphere bound_sphere;
+    BoundBox bound_box;
 #endif 
     friend std::ostream& operator<<(std::ostream& out, const Mesh& mesh);
 };

@@ -9,7 +9,7 @@
 #include "Mesh.hpp"
 #include "polyroots.hpp"
 
-const static float minhit = 0.05f;
+const static float minhit = 0.02f;
 const static float tol = 0.0001f;
 
 Mesh::Mesh( const std::string& fname )
@@ -23,22 +23,34 @@ Mesh::Mesh( const std::string& fname )
     size_t s1, s2, s3;
 
 #ifdef RENDER_BOUNDING_VOLUMES
-    glm::vec3 center(0);
-    double radius = 0;    
+
+    float min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
+    float max_x = -FLT_MAX, max_y = -FLT_MAX, max_z = -FLT_MAX;
+    
     std::ifstream ifs( fname.c_str() );
     while( ifs >> code ) {
         if( code == "v" ) {
             ifs >> vx >> vy >> vz;
+
+            min_x = (vx < min_x) ? vx : min_x;
+            min_y = (vy < min_y) ? vy : min_y;
+            min_z = (vz < min_z) ? vz : min_z;
+
+            max_x = (vx > max_x) ? vx : max_x;
+            max_y = (vy > max_y) ? vy : max_y;
+            max_z = (vz > max_z) ? vz : max_z;
+            
             glm::vec3 p(vx, vy, vz);
-            double dist = glm::distance(p, glm::vec3(0));
-            radius = dist > radius ? dist : radius; 
             m_vertices.push_back( p );
+            
         } else if( code == "f" ) {
             ifs >> s1 >> s2 >> s3;
             m_faces.push_back( Triangle( s1 - 1, s2 - 1, s3 - 1 ) );
         }
     }
-    bound_sphere.r = radius;
+
+    bound_box.min = glm::vec3(min_x, min_y, min_z);
+    bound_box.max = glm::vec3(max_x, max_y, max_z);
     
 #else
 
@@ -57,55 +69,133 @@ Mesh::Mesh( const std::string& fname )
 }
 
 #ifdef RENDER_BOUNDING_VOLUMES
-// TODO: DEBUG THIS !!!!!!!!!!
-bool BoundSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record) {
+
+bool BoundBox::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     bool hit = false;
-    glm::vec3 c(0);
-    double A = glm::dot(d,d);
-    double B = glm::dot(2.0f * d, e - c);
-    double C = glm::dot(e - c, e - c) - (r * r);
-    double roots[2];
-    size_t n_roots;
-    n_roots = quadraticRoots( A, B, C, roots);
-    if (n_roots > 0 && n_roots <= 2) {
-#if 1
-        
-        for(int i = 0; i < n_roots; i++) {
-            if (roots[i] < record.t && roots[i] > minhit) {
+    glm::vec3 n, p, pos;
+    float denom, nom, t, left, right, top, bottom, front, back;
+
+    left = min.x;
+    right = max.x;
+    bottom = min.y;
+    top = max.y;
+    back = min.z;
+    front = max.z;
+    
+    //NOTE: Front
+    n = glm::vec3(0, 0, 1);
+    p = max;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.x >= left && pos.x <= right &&
+                pos.y >= bottom && pos.y <= top) {
                 hit = true;
-                record.t = roots[i];
-                glm::vec3 p = e + (record.t * d);
-                record.normal = (2.0f * (p - c));
-                record.hit_point = p;
             }
         }
-#else
-        
-        if (roots[1] > minhit || roots[2] > minhit) {
-            hit = true;
-        }
-#endif
     }
+     
+    
+    //NOTE: Back
+    n = glm::vec3(0, 0, -1);
+    p = min;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.x >= left && pos.x <= right &&
+                pos.y >= bottom && pos.y <= top) {
+                hit = true;
+            }
+        }
+    }
+    
+    //NOTE: Left
+    n = glm::vec3(-1, 0, 0);
+    p = min;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.z >= back && pos.z <= front &&
+                pos.y >= bottom && pos.y <= top) {
+                hit = true;
+            }
+        }
+    }
+
+
+    //NOTE: Right
+    n = glm::vec3(1, 0, 0);
+    p = max;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.z >= back && pos.z <= front &&
+                pos.y >= bottom && pos.y <= top) {
+                hit = true;
+            }
+        }
+    }
+
+    //NOTE: Top
+    n = glm::vec3(0, 1, 0);
+    p = max;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.z >= back && pos.z <= front &&
+                pos.x >= left && pos.x <= right) {
+                hit = true;
+            }
+        }
+    }
+
+    //NOTE: Bottom
+    n = glm::vec3(0, -1, 0);
+    p = min;
+    denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        nom = dot(p - e, n);
+        t = nom / denom;
+        if (t > minhit && t < FLT_MAX) {
+            pos = e + t * d;
+            if (pos.z >= back && pos.z <= front &&
+                pos.x >= left && pos.x <= right) {
+                hit = true;
+            }
+        }
+    }
+
     return hit;
 }
 #endif
 
-
 bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     HitRecord rec;
     rec.t = FLT_MAX;
-    return Mesh::Hit(e, d, rec);
-    
+    return Mesh::Hit(e, d, rec);    
 }
 
 bool Mesh::Hit(const glm::vec3 & e, const glm::vec3 & dir,
                HitRecord & record) {
 
 #ifdef RENDER_BOUNDING_VOLUMES
-    if (!bound_sphere.Hit(e, dir, record)) {
+    if (!bound_box.Hit(e, dir)) {
         return false;
-    } else {
-        return true;
     }
 #endif
     

@@ -3,7 +3,7 @@
 #include "Primitive.hpp"
 #include "polyroots.hpp"
 
-const static float minhit = 0.05f;
+const static float minhit = 0.02f;
 const static float tol = 0.0001f;
 
 Primitive::~Primitive()

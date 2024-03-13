@@ -1,5 +1,7 @@
 // Termm--Fall 2020
 
+#define SUPPERSAMPLING
+
 #include <glm/ext.hpp>
 
 #include "A4.hpp"
@@ -94,11 +96,13 @@ static bool Hit(SceneNode * root, Ray & ray, HitRecord & record, MatrixStack & s
     } // for
     
     stack.pop(root->invtrans);
+#if 0
     if (once) {
         std::cout << "----------------------------------------" << std::endl;
         printmat4(stack.M * stack.inv);
         std::cout << "----------------------------------------" << std::endl;
     }
+#endif 
     return hit;
 }
 
@@ -167,15 +171,15 @@ static vec3 DirectLight(SceneNode * root,
     Ray shadow_ray = {record.hit_point, shadow_d};
     vec3 h = normalize(v + shadow_d);
     if (!Hit(root, shadow_ray, stack)) {
-        // double r = length(light->position - pos);
-        // double attenuation = 1.0 / ( light->falloff[0] + light->falloff[1] * r + light->falloff[2] * r * r );
-#if 0
+#if 1
+        double r = length(light->position - record.hit_point);
+        double attenuation = 1.0 / ( light->falloff[0] + light->falloff[1] * r + light->falloff[2] * r * r );
         result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour * attenuation
             + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour * attenuation;
-#endif
+#else
         result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour
             + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour;
-        
+#endif   
         // result += record.kd * light->colour;
     }
     return result;
@@ -201,15 +205,13 @@ static vec3 RayColour(
         for (const Light * light : lights) {
             colour +=  0.8f * DirectLight(root, v, record, light, stack);            
         }
-
-#if 1
-        if (maxhit < 8) {
+        
+        if (maxhit < 5) {
             maxhit += 1;
             ray.origin = record.hit_point;
             ray.direction = normalize(Reflect(ray.direction, record.normal));
             colour += 0.5f * record.ks * RayColour(root, ray, maxhit, ambient, eye, lights);
         }
-#endif        
     } else {
         // NOTE: BG colour
         once = false;
@@ -275,9 +277,42 @@ void A4_Render(
     vec3 mx;
     for (uint y = 0; y < h; ++y) {
         for (uint x = 0; x < w; ++x) {
-            
+
+#ifdef SUPPERSAMPLING
+            float f = 1.0f/3.0f;
+            vec2 offsets[9];
+            offsets[0] = vec2( 0, 0);
+            offsets[1] = vec2(-f, f);
+            offsets[2] = vec2( 0, f);
+            offsets[3] = vec2( f, f);
+            offsets[4] = vec2(-f, 0);
+            offsets[5] = vec2( f, 0);
+            offsets[6] = vec2(-f,-f);
+            offsets[7] = vec2( 0,-f);
+            offsets[8] = vec2( f,-f);
             vec3 colour;
-            vec4 pw = T4 * R3 * S2 * T1 * vec4((float)x, h - 1 - (float)y, 0, 1);
+            for (int i = 0; i < 9; i++) {
+                float _x = (float)x + offsets[i].x;
+                float _y = (float)y + offsets[i].y;
+                vec4 pw = T4 * R3 * S2 * T1 * vec4(_x, h - 1 - _y, 0, 1);            
+                Ray ray;
+                ray.origin = eye;
+                ray.direction = normalize(vec3(pw) - ray.origin);
+
+                if (x == 99 && y == 117) {
+                    int a = 0;
+                }
+            
+                colour += RayColour(root, ray, 0, ambient, eye, lights);
+                
+            }
+            colour.x = colour.x / 9.0f;
+            colour.y = colour.y / 9.0f;
+            colour.z = colour.z / 9.0f;
+            
+#else
+            vec4 pw = T4 * R3 * S2 * T1 * vec4((float)x, h - 1 - (float)y, 0, 1);            
+            vec3 colour;
             Ray ray;
             ray.origin = eye;
             ray.direction = normalize(vec3(pw) - ray.origin);
@@ -287,6 +322,7 @@ void A4_Render(
             }
             
             colour = RayColour(root, ray, 0, ambient, eye, lights);
+#endif
 
             colour.x = clamp(colour.x, 0.0f, 1.0f);
             colour.y = clamp(colour.y, 0.0f, 1.0f);
@@ -311,5 +347,7 @@ void A4_Render(
         progress += step;
         std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
     }
-    std::cout << std::endl << "max " << mx.z << std::endl;
+    std::cout << "\nDone!"  << std::endl;
+    
+//    std::cout << std::endl << "max " << mx.z << std::endl;
 }
