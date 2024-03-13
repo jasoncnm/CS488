@@ -728,9 +728,9 @@ void A3::renderSceneGraph(const SceneNode & root) {
 void printmat4(mat4 mat) {
     for (int col = 0; col < 4; col++) {
         for (int row = 0; row < 4; row++) {
-            cout << mat[col][row] << "\t";
+            std::cout << mat[col][row] << "\t";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
 
