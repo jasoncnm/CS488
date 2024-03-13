@@ -1,6 +1,6 @@
 // Termm--Fall 2020
 
-#define SUPPERSAMPLING
+#define SSAA
 
 #include <glm/ext.hpp>
 
@@ -14,7 +14,11 @@ typedef unsigned int uint;
 
 bool once = true;
 const static float tol = 0.0001f;
-
+#ifdef SSAA
+const static float minhit = 0.0005;
+#else
+const static float minhit = 0.005f;
+#endif
 void printmat4(mat4 mat) {
     for (int col = 0; col < 4; col++) {
         for (int row = 0; row < 4; row++) {
@@ -43,36 +47,40 @@ static vec3 Reflect(vec3 d, vec3 n) {
 static bool Hit(SceneNode * root, Ray & ray, HitRecord & record, MatrixStack & stack) {
     bool hit = false;
     stack.push(root->trans);
-    
     if (root->m_nodeType == NodeType::GeometryNode) {
+
         GeometryNode * gnode = static_cast<GeometryNode *>(root);
         vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
         vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
+        float l = length(vec3(stack.inv[0][0], stack.inv[1][1], stack.inv[2][2]));
+        //float epi = l * minhit;
+        float epi = minhit;
+
         switch (gnode->m_primitive->type) {
             case PrimitiveType::NHSPHERE: {
                 NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
-                hit = sphere->Hit(e, d, record);
+                hit = sphere->Hit(e, d, record, epi);
                 break;
             }
             case PrimitiveType::NHBOX: {
                 NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
-                hit = box->Hit(e, d, record);                
+                hit = box->Hit(e, d, record, epi);                
                 
                 break;
             }
             case PrimitiveType::MESH: {
                 Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
-                hit = mesh->Hit(e, d, record);
+                hit = mesh->Hit(e, d, record, epi);
                 break;
             }
             case PrimitiveType::CUBE: {
                 Cube * cube = static_cast<Cube *>(gnode->m_primitive);
-                hit = cube->Hit(e, d, record);
+                hit = cube->Hit(e, d, record, epi);
                 break;
             }
             case PrimitiveType::SPHERE: {
                 Sphere * sphere = static_cast<Sphere *>(gnode->m_primitive);
-                hit = sphere->Hit(e, d, record);
+                hit = sphere->Hit(e, d, record, epi);
                 break;
             }
                     
@@ -110,41 +118,47 @@ static bool Hit(SceneNode * root, Ray & ray, MatrixStack & stack) {
     stack.push(root->trans);
     bool hit = false;
     if (root->m_nodeType == NodeType::GeometryNode) {
+
         GeometryNode * gnode = static_cast<GeometryNode *>(root);
+        float l = length(vec3(stack.inv[0][0], stack.inv[1][1], stack.inv[2][2]));
+        //float epi = l * minhit;    
+        float epi = minhit;
+
         vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
         vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
+
         switch (gnode->m_primitive->type) {
             case PrimitiveType::NHSPHERE: {
                 NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
-                if (sphere->Hit(e, d)) {
+                if (sphere->Hit(e, d, epi)) {
                     hit = true;
                 }
                 break;
             }
             case PrimitiveType::NHBOX: {
                 NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
-                if (box->Hit(e, d)) {
+                if (box->Hit(e, d, epi)) {
                     hit = true;
                 }                    
                 break;
             }
             case PrimitiveType::MESH: {
                 Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
-                if (mesh->Hit(e, d)) {
+                if (mesh->Hit(e, d, epi)) {
                     hit = true;
                 }
                 break;
             }                
             case PrimitiveType::CUBE: {
                 Cube * cube = static_cast<Cube *>(gnode->m_primitive);
-                if (cube->Hit(e, d)) {
+                if (cube->Hit(e, d, epi)) {
                     hit = true;
                 }
                 break;
             }
             case PrimitiveType::SPHERE: {
                 Sphere * sphere = static_cast<Sphere *>(gnode->m_primitive);
-                if (sphere->Hit(e, d)) {
+                if (sphere->Hit(e, d, epi)) {
                     hit = true;
                 }
                 break;
@@ -171,15 +185,10 @@ static vec3 DirectLight(SceneNode * root,
     Ray shadow_ray = {record.hit_point, shadow_d};
     vec3 h = normalize(v + shadow_d);
     if (!Hit(root, shadow_ray, stack)) {
-#if 1
         double r = length(light->position - record.hit_point);
         double attenuation = 1.0 / ( light->falloff[0] + light->falloff[1] * r + light->falloff[2] * r * r );
         result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour * attenuation
             + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour * attenuation;
-#else
-        result = record.kd * max(0.0f, dot(record.normal, shadow_d)) * light->colour
-            + record.ks * pow(max(0.0f, dot(record.normal, h)), record.shininess) * light->colour;
-#endif   
         // result += record.kd * light->colour;
     }
     return result;
@@ -196,10 +205,9 @@ static vec3 RayColour(
     vec3 colour;
     MatrixStack stack = {mat4(1.), mat4(1.)};
 
-
     HitRecord record = { FLT_MAX, vec3(0), vec3(0), vec3(0), vec3(0), 0.0 };  
     if (Hit(root, ray, record, stack)) {
-        once = false;
+        // once = false;
         vec3 v = normalize(eye - record.hit_point);
         colour = record.kd * ambient;
         for (const Light * light : lights) {
@@ -214,7 +222,7 @@ static vec3 RayColour(
         }
     } else {
         // NOTE: BG colour
-        once = false;
+        // once = false;
         float y = ray.direction.y;
         colour += (1.0 - y) * vec3(0.722, 0.306, 0.039) + y * vec3(0.0, 0.0, 0.0);
     }
@@ -278,7 +286,7 @@ void A4_Render(
     for (uint y = 0; y < h; ++y) {
         for (uint x = 0; x < w; ++x) {
 
-#ifdef SUPPERSAMPLING
+#ifdef SSAA
             float f = 1.0f/3.0f;
             vec2 offsets[9];
             offsets[0] = vec2( 0, 0);
@@ -331,9 +339,7 @@ void A4_Render(
             
             image(x, y, 0) = colour.x;
             image(x, y, 1) = colour.y;
-            image(x, y, 2) = colour.z;
-
-            
+            image(x, y, 2) = colour.z;            
             
 #if 0
             // Red: 

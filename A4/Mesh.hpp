@@ -12,14 +12,17 @@
 
 // Use this #define to selectively compile your code to render the
 // bounding boxes around your mesh objects. Uncomment this option
-// to turn it on. 
-#define RENDER_BOUNDING_VOLUMES  //NOTE: When compile with -O2, enable this does not render nonhier.lua properly
+// to turn it on.
+//NOTE: (VM) When compile with -O2, enable this does not render nonhier.lua properly
+//      (gl33) nonhier.lua works with -O2 on strange ??? 
+#define RENDER_BOUNDING_VOLUMES
+
 
 #ifdef RENDER_BOUNDING_VOLUMES
 struct BoundBox {
     glm::vec3 min, max;
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
 
 };
 #endif
@@ -41,8 +44,8 @@ struct Triangle
 class Mesh : public Primitive {
 public:
     Mesh( const std::string& fname );
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
     
 private:
     std::vector<glm::vec3> m_vertices;

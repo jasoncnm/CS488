@@ -102,7 +102,7 @@ for i = 1, 6 do
    an_arc:add_child(arc)
 end
 
-imSize = 1024
+imSize = 512
 
 gr.render(scene,
 	  'macho-cows.png', imSize, imSize,

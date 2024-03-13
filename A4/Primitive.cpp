@@ -3,7 +3,6 @@
 #include "Primitive.hpp"
 #include "polyroots.hpp"
 
-const static float minhit = 0.02f;
 const static float tol = 0.0001f;
 
 Primitive::~Primitive()
@@ -28,15 +27,15 @@ NonhierBox::~NonhierBox()
 }
 
 
-bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
 
     HitRecord record;
     record.t = FLT_MAX;
-    return NonhierBox::Hit(e, d, record);
+    return NonhierBox::Hit(e, d, record, epi);
 }
 
 bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
-                     HitRecord & record) {
+                     HitRecord & record, float epi) {
     bool hit = false;
     double size = m_size;
     glm::vec3 n, p, pos;
@@ -56,7 +55,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.x >= left && pos.x <= right &&
                 pos.y >= bottom && pos.y <= top) {
@@ -76,7 +75,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.x >= left && pos.x <= right &&
                 pos.y >= bottom && pos.y <= top) {
@@ -95,7 +94,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.y >= bottom && pos.y <= top) {
@@ -115,7 +114,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.y >= bottom && pos.y <= top) {
@@ -134,7 +133,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.x >= left && pos.x <= right) {
@@ -153,7 +152,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.x >= left && pos.x <= right) {
@@ -169,7 +168,7 @@ bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d,
 }
 
 bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
-                        HitRecord & record) {
+                        HitRecord & record, float epi) {
     bool hit = false;
     double A = glm::dot(d,d);
     double B = 2.0f * glm::dot(d, e - m_pos);
@@ -179,7 +178,7 @@ bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
     n_roots = quadraticRoots( A, B, C, roots);
     if (n_roots > 0 && n_roots <= 2) {
         for(int i = 0; i < n_roots; i++) {
-            if (roots[i] < record.t && roots[i] > minhit) {
+            if (roots[i] < record.t && roots[i] > epi) {
                 hit = true;
                 record.t = roots[i];
                 glm::vec3 p = e + (record.t * d);
@@ -191,7 +190,7 @@ bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
     return hit;
 }
 
-bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
     bool hit = false;    
     double A = glm::dot(d,d);
     double B = glm::dot(2.0f * d, e - m_pos);
@@ -200,14 +199,14 @@ bool NonhierSphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     size_t n_roots;
     n_roots = quadraticRoots( A, B, C, roots);
     if (n_roots > 0 && n_roots <= 2) {
-        if (roots[1] > minhit || roots[2] > minhit) {
+        if (roots[1] > epi || roots[2] > epi) {
             hit = true;
         }
     }
     return hit;
 }
 
-bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
     bool hit = false;    
     glm::vec3 m_pos(0,0,0);
     double m_radius = 1.0;
@@ -218,7 +217,7 @@ bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
     size_t n_roots;
     n_roots = quadraticRoots( A, B, C, roots);
     if (n_roots > 0 && n_roots <= 2) {
-        if (roots[1] > minhit || roots[2] > minhit) {
+        if (roots[1] > epi || roots[2] > epi) {
             hit = true;
         }
     }
@@ -226,7 +225,7 @@ bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d) {
 }
 
 bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
-                 HitRecord & record) {
+                 HitRecord & record, float epi) {
     glm::vec3 m_pos(0,0,0);
     double m_radius = 1.0;
     bool hit = false;
@@ -238,7 +237,7 @@ bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
     n_roots = quadraticRoots( A, B, C, roots);
     if (n_roots > 0 && n_roots <= 2) {
         for(int i = 0; i < n_roots; i++) {
-            if (roots[i] < record.t && roots[i] > minhit) {
+            if (roots[i] < record.t && roots[i] > epi) {
                 hit = true;
                 record.t = roots[i];
                 glm::vec3 p = e + (record.t * d);
@@ -251,15 +250,15 @@ bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
 }
 
 
-bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d) {
+bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
     HitRecord record;
     record.t = FLT_MAX;
-    return Cube::Hit(e, d, record);
+    return Cube::Hit(e, d, record, epi);
 }
 
 
 bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
-                     HitRecord & record) {
+               HitRecord & record, float epi) {
     bool hit = false;
     double size = 1;
     glm::vec3 m_pos(0,0,0);
@@ -280,7 +279,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.x >= left && pos.x <= right &&
                 pos.y >= bottom && pos.y <= top) {
@@ -300,7 +299,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.x >= left && pos.x <= right &&
                 pos.y >= bottom && pos.y <= top) {
@@ -319,7 +318,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.y >= bottom && pos.y <= top) {
@@ -339,7 +338,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.y >= bottom && pos.y <= top) {
@@ -358,7 +357,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.x >= left && pos.x <= right) {
@@ -377,7 +376,7 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     if (denom >= tol || denom <= -tol) {
         nom = dot(p - e, n);
         t = nom / denom;
-        if (t < record.t && t > minhit) {
+        if (t < record.t && t > epi) {
             pos = e + t * d;
             if (pos.z >= back && pos.z <= front &&
                 pos.x >= left && pos.x <= right) {

@@ -22,8 +22,8 @@ public:
         type = PrimitiveType::SPHERE;
     }
     
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
     virtual ~Sphere();
     
 };
@@ -33,8 +33,8 @@ public:
     Cube() {
         type = PrimitiveType::CUBE;
     }
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
     virtual ~Cube();
     
 };
@@ -47,8 +47,8 @@ public:
         type = PrimitiveType::NHSPHERE;
     }
 
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
     
     virtual ~NonhierSphere();
 
@@ -65,8 +65,8 @@ public:
       type = PrimitiveType::NHBOX;
   }
 
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record);
-    bool Hit(const glm::vec3 & e, const glm::vec3 & d);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
   
   virtual ~NonhierBox();
 
