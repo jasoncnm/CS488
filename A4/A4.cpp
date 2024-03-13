@@ -1,6 +1,6 @@
 // Termm--Fall 2020
 
-#define SSAA
+// #define SSAA
 
 #include <glm/ext.hpp>
 
@@ -340,15 +340,7 @@ void A4_Render(
             image(x, y, 0) = colour.x;
             image(x, y, 1) = colour.y;
             image(x, y, 2) = colour.z;            
-            
-#if 0
-            // Red: 
-            image(x, y, 0) = (double)0;
-            // Green: 
-            image(x, y, 1) = (double)1.0;
-            // Blue: 
-            image(x, y, 2) = (double)1.0;
-#endif
+
         }
         progress += step;
         std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;

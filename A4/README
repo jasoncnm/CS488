@@ -18,11 +18,12 @@ THis program is tested on the lab computer gl33
 ##Manual:
 
 ---
+
 The reflected ray count limit is 5
 The intersection epislion for nonhier scences is 0.02,
 hier scences 0.005
 The Bounding volume is implemented using a box
-
+The Special rendering picture for bounding volume is located at ./A4/picture/macho-cows-bb.png
 
 Custom lua scene can be run using:
 	$ ./A4 Assets/sample.lua
@@ -33,4 +34,4 @@ Additional Features:
  1. Mirror reflections
  2. SuperSampling Antialising
 
-To enable supersampling uncommon the line #define SSAA in A4.cpp
+To enable/disable supersampling uncommon/common the line #define SSAA in A4.cpp. Default SSAA is off.
