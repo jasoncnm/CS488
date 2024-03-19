@@ -1,0 +1,37 @@
+## Compilation:
+
+Under the cs488 directory:
+
+	$ cd A4
+	$ premake4 gmake
+	$ make
+
+To run the program and generate the picture, type the command:
+	$ ./A4 Assets/lua-file.lua
+
+The generated picture will be at ./A4
+
+THis program is tested on the lab computer gl33
+
+---
+
+##Manual:
+
+---
+
+The reflected ray count limit is 5
+The intersection epislion for nonhier scences is 0.02,
+hier scences 0.005
+The Bounding volume is implemented using a box
+The Special rendering picture for bounding volume is located at ./A4/picture/macho-cows-bb.png
+
+Custom lua scene can be run using:
+	$ ./A4 Assets/sample.lua
+The sample picture is at ./A4/picture/sample.png
+The sample picture contains two nonhierical meshes and one hierical fractal formed by spheres 
+
+Additional Features:
+ 1. Mirror reflections
+ 2. SuperSampling Antialising
+
+To enable/disable supersampling uncommon/common the line #define SSAA in A4.cpp. Default SSAA is off.
