@@ -3,7 +3,7 @@
 // #define SSAA
 
 #include <glm/ext.hpp>
-
+#include <thread>
 
 #include "A4.hpp"
 #include "GeometryNode.hpp"
@@ -16,7 +16,7 @@ typedef unsigned int uint;
 bool once = true;
 const static float tol = 0.0001f;
 #ifdef SSAA
-const static float minhit = 0.0005;
+const static float minhit = 0.005f;
 #else
 const static float minhit = 0.005f;
 #endif
@@ -45,12 +45,12 @@ static vec3 Reflect(vec3 d, vec3 n) {
     return result;
 }
 
-static bool Hit(SceneNode * root, Ray & ray, HitRecord & record, MatrixStack & stack) {
+static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, MatrixStack & stack) {
     bool hit = false;
     stack.push(root->trans);
     if (root->m_nodeType == NodeType::GeometryNode) {
 
-        GeometryNode * gnode = static_cast<GeometryNode *>(root);
+        const GeometryNode * gnode = static_cast<const GeometryNode *>(root);
         vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
         vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
         float l = length(vec3(stack.inv[0][0], stack.inv[1][1], stack.inv[2][2]));
@@ -100,7 +100,7 @@ static bool Hit(SceneNode * root, Ray & ray, HitRecord & record, MatrixStack & s
 
     }
     
-    for (SceneNode * node : root->children) {
+    for (const SceneNode * node : root->children) {
         hit |= Hit(node, ray, record, stack);
     } // for
     
@@ -115,12 +115,12 @@ static bool Hit(SceneNode * root, Ray & ray, HitRecord & record, MatrixStack & s
     return hit;
 }
 
-static bool Hit(SceneNode * root, Ray & ray, MatrixStack & stack) {
+static bool Hit(const SceneNode * root, const Ray & ray, MatrixStack & stack) {
     stack.push(root->trans);
     bool hit = false;
     if (root->m_nodeType == NodeType::GeometryNode) {
 
-        GeometryNode * gnode = static_cast<GeometryNode *>(root);
+        const GeometryNode * gnode = static_cast<const GeometryNode *>(root);
         float l = length(vec3(stack.inv[0][0], stack.inv[1][1], stack.inv[2][2]));
         //float epi = l * minhit;    
         float epi = minhit;
@@ -167,7 +167,7 @@ static bool Hit(SceneNode * root, Ray & ray, MatrixStack & stack) {
         }
     }
    
-    for (SceneNode * node : root->children) {
+    for (const SceneNode * node : root->children) {
         hit |= Hit(node, ray, stack);
     }
     stack.pop(root->invtrans);
@@ -175,7 +175,7 @@ static bool Hit(SceneNode * root, Ray & ray, MatrixStack & stack) {
 }
 
 
-static vec3 DirectLight(SceneNode * root,
+static vec3 DirectLight(const SceneNode * root,
                         const vec3 & v,
                         HitRecord & record,
                         const Light * light,
@@ -196,8 +196,8 @@ static vec3 DirectLight(SceneNode * root,
 }
 
 static vec3 RayColour(
-    SceneNode * root,
-    Ray & ray,
+    const SceneNode * root,
+    const Ray & ray,
     uint maxhit,
     const vec3 ambient,
     const vec3 eye,
@@ -217,9 +217,10 @@ static vec3 RayColour(
         
         if (maxhit < 5) {
             maxhit += 1;
-            ray.origin = record.hit_point;
-            ray.direction = normalize(Reflect(ray.direction, record.normal));
-            colour += 0.5f * record.ks * RayColour(root, ray, maxhit, ambient, eye, lights);
+            Ray reflect;
+            reflect.origin = record.hit_point;
+            reflect.direction = normalize(Reflect(ray.direction, record.normal));
+            colour += 0.5f * record.ks * RayColour(root, reflect, maxhit, ambient, eye, lights);
         }
     } else {
         // NOTE: BG colour
@@ -229,6 +230,55 @@ static vec3 RayColour(
     }
     
     return colour;
+}
+
+void RenderTiles(const SceneNode * root,
+                 Image & image,
+                 const vec3 & eye,
+                 const vec3 ambient,
+                 const std::list<Light *> & lights,
+                 const mat4 & trans, const vec2 * offsets,
+                 uint xmin, uint onepass_xmax, uint ymin, uint onepass_ymax,
+                 uint w, uint h) {
+    vec3 colour;
+    for (uint y = ymin; y < onepass_ymax; y++) {
+        for (uint x = xmin; x < onepass_xmax; x++) {
+
+#ifdef SSAA
+            for (int i = 0; i < 9; i++) {
+                float _x = (float)x + offsets[i].x;
+                float _y = (float)y + offsets[i].y;
+                vec4 pw = trans * vec4(_x, h - 1 - _y, 0, 1);            
+                Ray ray;
+                ray.origin = eye;
+                ray.direction = normalize(vec3(pw) - ray.origin);
+            
+                colour += RayColour(root, ray, 0, ambient, eye, lights);
+                
+            }
+            
+            colour.x = colour.x / 9.0f;
+            colour.y = colour.y / 9.0f;
+            colour.z = colour.z / 9.0f;
+            
+#else
+            vec4 pw = trans * vec4((float)x, h - 1 - (float)y, 0, 1);            
+            Ray ray;
+            ray.origin = eye;
+            ray.direction = normalize(vec3(pw) - ray.origin);
+            
+            colour = RayColour(root, ray, 0, ambient, eye, lights);
+#endif
+
+            colour.x = clamp(colour.x, 0.0f, 1.0f);
+            colour.y = clamp(colour.y, 0.0f, 1.0f);
+            colour.z = clamp(colour.z, 0.0f, 1.0f);
+            
+            image(x, y, 0) = colour.x;
+            image(x, y, 1) = colour.y;
+            image(x, y, 2) = colour.z;            
+        }
+    }
 }
 
 void A4_Render(
@@ -269,9 +319,6 @@ void A4_Render(
 
     size_t h = image.height();
     size_t w = image.width();
-
-    float progress = 0;
-    float step = 1.0f/(float)h * 100;
     
     float d = (float)h / (2 * tan(radians(fovy / 2)));
     mat4 T1 = translate(mat4(1.), vec3(-0.5f * (float)w, -0.5f * (float)h, d)); 
@@ -283,70 +330,52 @@ void A4_Render(
 
     mat4 R3 = mat4(vec4(view_x, 0), vec4(view_y, 0), vec4(view_z, 0), vec4(0,0,0,1));
     mat4 T4 = translate(mat4(1.), eye);
-    vec3 mx;
-    for (uint y = 0; y < h; ++y) {
-        for (uint x = 0; x < w; ++x) {
 
-#ifdef SSAA
-            float f = 1.0f/3.0f;
-            vec2 offsets[9];
-            offsets[0] = vec2( 0, 0);
-            offsets[1] = vec2(-f, f);
-            offsets[2] = vec2( 0, f);
-            offsets[3] = vec2( f, f);
-            offsets[4] = vec2(-f, 0);
-            offsets[5] = vec2( f, 0);
-            offsets[6] = vec2(-f,-f);
-            offsets[7] = vec2( 0,-f);
-            offsets[8] = vec2( f,-f);
-            vec3 colour;
-            for (int i = 0; i < 9; i++) {
-                float _x = (float)x + offsets[i].x;
-                float _y = (float)y + offsets[i].y;
-                vec4 pw = T4 * R3 * S2 * T1 * vec4(_x, h - 1 - _y, 0, 1);            
-                Ray ray;
-                ray.origin = eye;
-                ray.direction = normalize(vec3(pw) - ray.origin);
-
-                if (x == 99 && y == 117) {
-                    int a = 0;
-                }
-            
-                colour += RayColour(root, ray, 0, ambient, eye, lights);
-                
-            }
-            colour.x = colour.x / 9.0f;
-            colour.y = colour.y / 9.0f;
-            colour.z = colour.z / 9.0f;
-            
-#else
-            vec4 pw = T4 * R3 * S2 * T1 * vec4((float)x, h - 1 - (float)y, 0, 1);            
-            vec3 colour;
-            Ray ray;
-            ray.origin = eye;
-            ray.direction = normalize(vec3(pw) - ray.origin);
-
-            if (x == 99 && y == 117) {
-                int a = 0;
-            }
-            
-            colour = RayColour(root, ray, 0, ambient, eye, lights);
-#endif
-
-            colour.x = clamp(colour.x, 0.0f, 1.0f);
-            colour.y = clamp(colour.y, 0.0f, 1.0f);
-            colour.z = clamp(colour.z, 0.0f, 1.0f);
-            if (colour.z > mx.z) mx = colour;
-            
-            image(x, y, 0) = colour.x;
-            image(x, y, 1) = colour.y;
-            image(x, y, 2) = colour.z;            
-
-        }
-        progress += step;
-        std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
-    }
-    std::cout << "\nDone!"  << std::endl;
+    mat4 trans = T4 * R3 * S2 * T1;
     
+    float f = 1.0f/3.0f;
+    vec2 offsets[9];
+    offsets[0] = vec2( 0, 0);
+    offsets[1] = vec2(-f, f);
+    offsets[2] = vec2( 0, f);
+    offsets[3] = vec2( f, f);
+    offsets[4] = vec2(-f, 0);
+    offsets[5] = vec2( f, 0);
+    offsets[6] = vec2(-f,-f);
+    offsets[7] = vec2( 0,-f);
+    offsets[8] = vec2( f,-f);
+
+    const uint core_count = 8;
+    
+    uint tile_w = w / core_count;
+    uint tile_h = tile_w;
+    uint tile_count_x = (w + tile_w - 1) / tile_w;
+    uint tile_count_y = (h + tile_h - 1) / tile_h;
+    uint totaltile = tile_count_y * tile_count_x;
+
+    float progress = 0;
+    float step = 1.0f/(float)totaltile * 100;    
+    
+    for (uint tile_y = 0; tile_y < tile_count_y; tile_y++) {
+        uint miny = tile_y * tile_h;
+        uint onepass_ymax = miny + tile_h;
+        if (onepass_ymax > h) {
+            onepass_ymax = h;
+        }
+        for (uint tile_x = 0; tile_x < tile_count_x; tile_x++) {
+            uint minx = tile_x * tile_w;
+            uint onepass_xmax = minx + tile_w;
+            if (onepass_xmax > w) {
+                onepass_xmax = w;
+            }
+            RenderTiles(root, image, eye, ambient, lights, trans, offsets,
+                        minx, onepass_xmax, miny, onepass_ymax, w, h);
+            
+            progress += step;
+            std::cout << '\r' << "progress: " << (int)progress << "%" << std::flush;
+        }
+        
+    }
+    std::cout << "\nDone!" << std::endl;
 //    std::cout << std::endl << "max " << mx.z << std::endl;
 }

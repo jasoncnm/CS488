@@ -110,7 +110,7 @@ imSize = 512
 for i = 1, 24*5 do
    scene:rotate('X', 1)
    gr.render(scene,
-      'Animation/macho-cows-' .. string.format("%04d", i) .. '.png', imSize, imSize,
+      'Animation/macho_cows_' .. string.format("%04d", i) .. '.png', imSize, imSize,
       {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
       {0.4, 0.4, 0.4}, {gr.light({200, 202, 430}, {0.8, 0.8, 0.8}, {1, 0, 0})})
 end

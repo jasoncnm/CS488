@@ -1,6 +1,6 @@
 // Termm--Fall 2020
 
-// #define SSAA
+#define SSAA
 
 #include <glm/ext.hpp>
 

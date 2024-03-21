@@ -12,11 +12,11 @@
 struct MatrixStack {
     glm::mat4 M;
     glm::mat4 inv;
-    void push(glm::mat4 & trans) {
+    void push(const glm::mat4 & trans) {
         M = M * trans;
         inv = glm::inverse(M);
     }
-    void pop(glm::mat4 & invtrans) {
+    void pop(const glm::mat4 & invtrans) {
         M = M * invtrans;
         inv = glm::inverse(M);
     }
