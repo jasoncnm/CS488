@@ -55,14 +55,15 @@ cow_poly:translate(0.0, -1.0, 0.0)
 -- ##############################################
 -- The Scene
 -- ##############################################
-
 scene = gr.node('scene')
 scene:rotate('X', 23)
 
--- the floor
+base = gr.node('base')
+scene:add_child(base)
 
+-- the floor
 plane = gr.mesh('plane', 'Assets/plane.obj' )
-scene:add_child(plane)
+base:add_child(plane)
 plane:set_material(grass)
 plane:scale(30, 30, 30)
 
@@ -72,11 +73,11 @@ plane:scale(30, 30, 30)
 
 --buckyball = gr.mesh( 'buckyball', 'Assets/buckyball.obj' )
 buckyball = gr.sphere('ball')
-scene:add_child(buckyball)
+base:add_child(buckyball)
 buckyball:set_material(stone)
 buckyball:scale(1.5, 1.5, 1.5)
 
--- Use the instanced cow model to place some actual cows in the scene.
+-- Use the instanced cow model to place some actual cows in the base.
 -- For convenience, do this in a loop.
 
 cow_number = 1
@@ -86,7 +87,7 @@ cow_number = 1
                {{5,1.3,-11}, 180},
                {{-5.5,1.3,-3}, -60}}) do
       cow_instance = gr.node('cow' .. tostring(cow_number))
-      scene:add_child(cow_instance)
+      base:add_child(cow_instance)
       cow_instance:add_child(cow_poly)
       cow_instance:scale(1.4, 1.4, 1.4)
       cow_instance:rotate('Y', pt[2])
@@ -101,14 +102,14 @@ cow_number = 1
 for i = 1, 6 do
    an_arc = gr.node('arc' .. tostring(i))
    an_arc:rotate('Y', (i-1) * 60)
-   scene:add_child(an_arc)
+   base:add_child(an_arc)
    an_arc:add_child(arc)
 end
 
-imSize = 512
+imSize = 256
 
-for i = 1, 24*5 do
-   scene:rotate('X', 1)
+for i = 1, 24*15 do
+   base:rotate('Y', 1)
    gr.render(scene,
       'Animation/macho_cows_' .. string.format("%04d", i) .. '.png', imSize, imSize,
       {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,

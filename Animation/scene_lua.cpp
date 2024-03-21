@@ -55,7 +55,7 @@
 #include "Primitive.hpp"
 #include "Material.hpp"
 #include "PhongMaterial.hpp"
-#include "A4.hpp"
+#include "Animation.hpp"
 
 typedef std::map<std::string,Mesh*> MeshMap;
 static MeshMap mesh_map;
@@ -248,34 +248,34 @@ int gr_nh_box_cmd(lua_State* L)
 extern "C"
 int gr_mesh_cmd(lua_State* L)
 {
-	GRLUA_DEBUG_CALL;
+    GRLUA_DEBUG_CALL;
 
-	gr_node_ud* data = (gr_node_ud*)lua_newuserdata(L, sizeof(gr_node_ud));
-	data->node = 0;
+    gr_node_ud* data = (gr_node_ud*)lua_newuserdata(L, sizeof(gr_node_ud));
+    data->node = 0;
 
-	const char* name = luaL_checkstring(L, 1);
-	const char* obj_fname = luaL_checkstring(L, 2);
+    const char* name = luaL_checkstring(L, 1);
+    const char* obj_fname = luaL_checkstring(L, 2);
 
-	std::string sfname(obj_fname);
+    std::string sfname(obj_fname);
 
-	// Use a dictionary structure to make sure every mesh is loaded
-	// at most once.
-	auto i = mesh_map.find(sfname);
-	Mesh *mesh = nullptr;
+    // Use a dictionary structure to make sure every mesh is loaded
+    // at most once.
+    auto i = mesh_map.find(sfname);
+    Mesh *mesh = nullptr;
 
-	if( i == mesh_map.end() ) {
-		mesh = new Mesh(obj_fname);
-		mesh_map[sfname] = mesh;
-	} else {
-		mesh = i->second;
-	}
+    if( i == mesh_map.end() ) {
+        mesh = new Mesh(obj_fname);
+        mesh_map[sfname] = mesh;
+    } else {
+        mesh = i->second;
+    }
 
-	data->node = new GeometryNode(name, mesh);
+    data->node = new GeometryNode(name, mesh);
 
-	luaL_getmetatable(L, "gr.node");
-	lua_setmetatable(L, -2);
+    luaL_getmetatable(L, "gr.node");
+    lua_setmetatable(L, -2);
 
-	return 1;
+    return 1;
 }
 
 // Make a Point light
@@ -346,11 +346,12 @@ int gr_render_cmd(lua_State* L)
     lua_pop(L, 1);
   }
 
-	Image im( width, height);
-	A4_Render(root->node, im, eye, view, up, fov, ambient, lights);
+    Image im( width, height);
+    std::cout << filename << std::endl;
+    A4_Render(root->node, im, eye, view, up, fov, ambient, lights);
     im.savePng( filename );
 
-	return 0;
+    return 0;
 }
 
 // Create a Material
