@@ -11,7 +11,6 @@ int main(int argc, char** argv)
     lim.rlim_cur *= 10;
     lim.rlim_max *= 10;
     setrlimit(RLIMIT_CPU, &lim);
-    std::cout << "limits: " << lim.rlim_max  << std::endl;
 
 
     std::string filename = "Assets/simple.lua";

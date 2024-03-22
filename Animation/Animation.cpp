@@ -6,6 +6,9 @@
 #include <thread>
 #include <cassert>
 #include <array>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "Animation.hpp"
 #include "GeometryNode.hpp"
@@ -236,7 +239,6 @@ static vec3 RayColour(
 
 void RenderTile(const WorkQueue * queue, uint index) {
 
-    
     const WorkOrder & order = queue->work_orders[index];
     
     const SceneNode * root = order.root;
@@ -260,8 +262,21 @@ void RenderTile(const WorkQueue * queue, uint index) {
                 
 #ifdef SSAA
             for (int i = 0; i < 9; i++) {
-                float _x = (float)x + offsets[i].x;
-                float _y = (float)y + offsets[i].y;
+
+                double randnum = ((double)rand()) / INT_MAX;
+                assert((0.0 <= randnum + tol) && (randnum <= 1.0 + tol)); 
+#if 1
+                // NOTE: jittering
+                float jitter = (float)(randnum / 3) - (1.0f / 6.0f);
+                
+                float _x = (float)x + offsets[i].x + jitter;
+                float _y = (float)y + offsets[i].y + jitter;
+#else
+                // NOTE: Random sampling
+                float jitter = (float)(randnum) - 0.5f;
+                float _x = (float)x + jitter;
+                float _y = (float)y + jitter;
+#endif
                 vec4 pw = trans * vec4(_x, h - 1 - _y, 0, 1);            
                 Ray ray;
                 ray.origin = eye;
@@ -311,6 +326,7 @@ void A4_Render(
     const glm::vec3 & ambient,
     const std::list<Light *> & lights
                ) {
+    srand(time(NULL));
 
     // Fill in raytracing code here...
 #if 0
