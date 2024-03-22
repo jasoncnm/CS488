@@ -1,7 +1,7 @@
 // Termm--Fall 2020
 
 #include "Image.hpp"
-
+#include <cassert>
 #include <iostream>
 #include <cstring>
 #include <lodepng/lodepng.h>
@@ -40,6 +40,49 @@ Image::Image(const Image & other)
                 m_width * m_height * m_colorComponents * sizeof(double));
   }
 }
+
+//---------------------------------------------------------------------------------------
+Image::Image(const std::string & filename) {
+
+    std::vector<unsigned char> image;
+    unsigned error = lodepng::decode(image, m_width, m_height, filename, LCT_RGB);
+    if (error) {
+        std::cerr << "decoder error " << error << ": " << lodepng_error_text(error)
+                  << std::endl;
+    }
+
+    size_t numElements = m_width * m_height * m_colorComponents;
+    m_data = new double[numElements];
+
+    int minval = 999999;
+    int maxval = -999999;
+
+    for (uint i = 0; i < numElements; i++) {
+        int data = (int)image[i];
+        assert(data >= 0);
+        assert(data <= 255);
+        m_data[i] = (double)data / 255.0;
+        if (data < minval) minval = (int)data;
+        if (data > maxval) maxval = (int)data;        
+    }
+    
+    std::cout << numElements << " "  << image.size() << " " << minval << " " << maxval << std::endl;
+    
+#if 0
+    for (uint y(0); y < m_height; y++) {
+        for (uint x(0); x < m_width; x++) {
+            for (uint i(0); i < m_colorComponents; ++i) {
+                data = image[m_colorComponents * (m_width * y + x) + i];
+                if ((int)data < minval) minval = (int)data;
+                if ((int)data > maxval) maxval = (int)data;
+                m_data[m_colorComponents * (m_width * y + x) + i] = (double)data/255.0;
+            }
+        }
+    }
+#endif
+
+}
+
 
 //---------------------------------------------------------------------------------------
 Image::~Image()

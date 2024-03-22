@@ -42,7 +42,7 @@ buildOptions = {"-std=c++14", "-O2", "-pthread", "-lc"}
 solution "CS488-Projects"
     configurations { "Debug", "Release" }
 
-    project "A4"
+    project "Ani"
         kind "ConsoleApp"
         language "C++"
         location "build"

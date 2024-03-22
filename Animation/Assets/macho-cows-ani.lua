@@ -106,7 +106,7 @@ for i = 1, 6 do
    an_arc:add_child(arc)
 end
 
-imSize = 256
+imSize = 512
 
 for i = 1, 24*15 do
    base:rotate('Y', 1)

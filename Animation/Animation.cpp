@@ -14,6 +14,7 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 #include "Mesh.hpp"
+
 using namespace glm;
 
 typedef unsigned int uint;
@@ -61,7 +62,7 @@ static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, Mat
         float l = length(vec3(stack.inv[0][0], stack.inv[1][1], stack.inv[2][2]));
         //float epi = l * minhit;
         float epi = minhit;
-
+        bool texture = false;
         switch (gnode->m_primitive->type) {
             case PrimitiveType::NHSPHERE: {
                 NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
@@ -89,14 +90,21 @@ static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, Mat
                 hit = sphere->Hit(e, d, record, epi);
                 break;
             }
+            case PrimitiveType::TEXTUREPLANE: {
+                texture = true;
+                TexturePlane * plane = static_cast<TexturePlane *>(gnode->m_primitive);
+                hit = plane->Hit(e, d, record, epi);
+                record.kd += plane->ApplyTexture(record.hit_point);
+                break;
+            }
                     
             default:
                 break;
         } // switch
         if (hit) {
             PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
-            record.kd = mat->getkd();
-            record.ks = mat->getks();
+            if (!texture) record.kd = mat->getkd();
+            record.ks += mat->getks();
             record.shininess = mat->getshininess();                
             record.hit_point = vec3(stack.M * vec4(record.hit_point, 1));
             record.normal = vec3(transpose(stack.inv) * vec4(record.normal, 0));
@@ -167,6 +175,12 @@ static bool Hit(const SceneNode * root, const Ray & ray, MatrixStack & stack) {
                 if (sphere->Hit(e, d, epi)) {
                     hit = true;
                 }
+                break;
+            }
+                
+            case PrimitiveType::TEXTUREPLANE: {
+                TexturePlane * plane = static_cast<TexturePlane *>(gnode->m_primitive);
+                hit = plane->Hit(e, d, epi);
                 break;
             }
         }
@@ -374,9 +388,13 @@ void A4_Render(
     offsets[7] = vec2( 0,-f);
     offsets[8] = vec2( f,-f);
 
+#if 0
+    const uint core_count = 1;
+    const uint _totaltile = 1;
+#else
     const uint core_count = 8;
     const uint _totaltile = 64;
-
+#endif
     uint tile_w = w / core_count;
     uint tile_h = tile_w;
     uint tile_count_x = (w + tile_w - 1) / tile_w;

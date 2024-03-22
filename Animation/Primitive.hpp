@@ -5,14 +5,32 @@
 #include <glm/glm.hpp>
 
 #include "Hit_Record.hpp"
+#include "Image.hpp"
 
-
-enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, };
+enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, TEXTUREPLANE };
 
 class Primitive {
 public:
     PrimitiveType type;
     virtual ~Primitive();
+};
+
+class TexturePlane : public Primitive {
+public:
+    TexturePlane(const std::string & filename, glm::vec3 normal)
+            : normal(normal) {
+        type = PrimitiveType::TEXTUREPLANE;
+        texture = new Image(filename);
+    }
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
+    glm::vec3 ApplyTexture(glm::vec3 pos);
+
+    virtual ~TexturePlane();
+    
+private:
+    Image * texture;
+    glm::vec3 normal;
 };
 
 class Sphere : public Primitive {

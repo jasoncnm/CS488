@@ -1,9 +1,12 @@
 // Termm--Fall 2020
 
+#include <iostream>
+
 #include "Primitive.hpp"
 #include "polyroots.hpp"
 
 const static float tol = 0.0001f;
+static bool once = true;
 
 Primitive::~Primitive()
 {
@@ -26,6 +29,133 @@ NonhierBox::~NonhierBox()
 {
 }
 
+TexturePlane::~TexturePlane() {
+    delete texture;
+}
+
+
+bool TexturePlane::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
+
+    HitRecord record;
+    record.t = FLT_MAX;
+    return TexturePlane::Hit(e, d, record, epi);
+}
+
+
+static bool InBound(glm::vec3 pos, glm::vec3 normal) {
+    bool result = false;
+    if (normal.x == 1) {
+        result = (pos.z >= 0 && pos.z <= 1 &&
+                  pos.y >= 0 && pos.y <= 1);
+    } else if (normal.y == 1) {
+        result = (pos.x >= 0 && pos.x <= 1 &&
+                  pos.z >= 0 && pos.z <= 1);
+    } else if (normal.z == 1) {
+        result = (pos.x >= 0 && pos.x <= 1 &&
+                  pos.y >= 0 && pos.y <= 1);    
+    }
+    return result;
+}
+
+static float truncate_float_errors(float val) {
+    float result = val;
+    if (result <= tol && result >= -tol) {
+        result = 0;
+    }
+    return result;
+}
+
+glm::vec3 TexturePlane::ApplyTexture(glm::vec3 pos) {
+    glm::vec3 result(0);
+    
+    uint tw = texture->width();
+    uint th = texture->height();    
+    
+#if 1
+    double R = 255.0 * (*texture)(16, 29, 0);
+    double G = 255.0 * (*texture)(16, 29, 1);
+    double B = 255.0 * (*texture)(16, 29, 2);
+    if (once) {        
+        once = false;
+        std::cout << "Texture_image_width " << tw << " height "
+                  << th << std::endl;
+        std::cout << "colour at (16,29): " << R << " " << G << " " << B << std::endl;
+    }
+#endif    
+
+    float u, v, di, dj, up, vp;
+    int i, j;
+    glm::vec3 C00, C01, C10, C11;
+
+    if (normal.x == 1) {
+        u = pos.z;
+        v = 1.0 - pos.y;
+    } else if (normal.y == 1) {
+        u = pos.x;
+        v = pos.z;
+    } else if (normal.z == 1) {
+        u = pos.x;
+        v = 1.0 - pos.y;
+    }
+    di = (tw - 1.0) * u;
+    dj = (th - 1.0) * v;
+    i = (int)di;
+    j = (int)dj;
+    up = di - i;
+    vp = dj - j;
+    
+    vp = glm::clamp((double)vp, 0.0, 1.0);
+    up = glm::clamp((double)up, 0.0, 1.0);
+    
+    C00 = glm::vec3((*texture)(i, j, 0), (*texture)(i, j, 1), (*texture)(i, j, 2));
+    C01 = glm::vec3((*texture)(i, j + 1, 0), (*texture)(i, j + 1, 1), (*texture)(i, j + 1, 2));
+    C10 = glm::vec3((*texture)(i+1, j, 0), (*texture)(i+1, j, 1), (*texture)(i+1, j, 2));
+    C11 = glm::vec3((*texture)(i+1, j+1, 0), (*texture)(i+1, j+1, 1), (*texture)(i+1, j+1, 2));
+
+#if 0
+    if (i == 408 && j == 223) {
+        glm::vec3 c = 255.0 * C00;
+        std::cout << "C00 " << c.x << " " << c.y << " " << c.z << std::endl;
+        double R = (*texture)(408, 223, 0);
+        double G = (*texture)(408, 223, 1);
+        double B = (*texture)(408, 223, 2);
+        std::cout << "colour at (408, 223): " << R << " " << G << " " << B << std::endl;        
+    }
+#endif    
+#if 1
+    result = C00 * (1.0f - up) * (1.0f - vp) + C01 * (1.0 - up) * vp
+        + C10 * up * (1 - vp) + C11 * up * vp;
+#else
+    result = C00;
+#endif
+    return result;
+}
+
+bool TexturePlane::Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi) {
+    bool hit = false;
+    
+    //NOTE: Front
+    glm::vec3 n = normal;
+    glm::vec3 p = glm::vec3(0);
+    
+    float denom = dot(d,n);
+    if (denom >= tol || denom <= -tol) {
+        float nom = dot(p - e, n);
+        float t = nom / denom;
+        if (t < record.t && t > epi) {
+            glm::vec3 pos = e + t * d;
+            
+            if (InBound(pos, normal)) {
+                hit = true;
+                record.hit_point = pos;
+                record.t = t;
+                record.normal = n;
+            }
+        }
+    }
+    return hit;
+}
+    
 
 bool NonhierBox::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
 
