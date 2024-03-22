@@ -3,4 +3,7 @@
 sudo apt install cmake librsvg2-dev libx264-dev libgtk-3-dev
 sudo apt-get install libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
 
-ffmpeg -r 24 -i macho_cows_%4d.png -c:v libx264 -vf fps=24 -pix_fmt yuv420p animation.mp4
+ffmpeg -r 24 -i macho_cows_%4d.png -c:v libx264 -vf fps=24 -pix_fmt yuv420p ../upload/animation.mp4
+
+
+scp mjunjie@linux.student.cs.uwaterloo.ca:~/cs488/CS488/Animation/Animation/* ./CS488/Animation/Animation/
