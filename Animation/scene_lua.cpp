@@ -245,6 +245,28 @@ int gr_texture_plane_cmd(lua_State * L)
 
 }
 
+// Create a TextureSphere node
+extern "C"
+int gr_texture_sphere_cmd(lua_State * L)
+{
+    GRLUA_DEBUG_CALL;
+  
+    gr_node_ud* data = (gr_node_ud*)lua_newuserdata(L, sizeof(gr_node_ud));
+    data->node = 0;
+  
+    const char* name = luaL_checkstring(L, 1);
+
+    const char* texture_file_name = luaL_checkstring(L, 2);
+    
+    data->node = new GeometryNode( name, new TextureSphere(texture_file_name) );
+
+    luaL_getmetatable(L, "gr.node");
+    lua_setmetatable(L, -2);
+
+    return 1;
+
+}
+
 // Create a non-hierarchical Box node
 extern "C"
 int gr_nh_box_cmd(lua_State* L)
@@ -546,6 +568,7 @@ static const luaL_Reg grlib_functions[] = {
   {"node", gr_node_cmd},
   {"sphere", gr_sphere_cmd},
   {"textureplane", gr_texture_plane_cmd},
+  {"texturesphere", gr_texture_sphere_cmd},
   {"joint", gr_joint_cmd},
   {"material", gr_material_cmd},
   // New for assignment 4

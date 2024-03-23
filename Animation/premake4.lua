@@ -38,6 +38,7 @@ if os.get() == "macosx" then
 end
 
 buildOptions = {"-std=c++14", "-O2", "-pthread", "-lc"}
+-- buildOptions = {"-std=c++14"}
 
 solution "CS488-Projects"
     configurations { "Debug", "Release" }

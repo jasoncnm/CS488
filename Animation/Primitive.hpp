@@ -7,7 +7,7 @@
 #include "Hit_Record.hpp"
 #include "Image.hpp"
 
-enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, TEXTUREPLANE };
+enum PrimitiveType { SPHERE, CUBE, NHSPHERE, NHBOX, MESH, TEXTUREPLANE, TEXTURESPHERE };
 
 class Primitive {
 public:
@@ -27,6 +27,23 @@ public:
     glm::vec3 ApplyTexture(glm::vec3 pos);
 
     virtual ~TexturePlane();
+    
+private:
+    Image * texture;
+    glm::vec3 normal;
+};
+
+class TextureSphere : public Primitive {
+public:
+    TextureSphere(const std::string & filename) {
+        type = PrimitiveType::TEXTURESPHERE;
+        texture = new Image(filename);
+    }
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi);
+    bool Hit(const glm::vec3 & e, const glm::vec3 & d, float epi);
+    glm::vec3 ApplyTexture(glm::vec3 pos);
+
+    virtual ~TextureSphere();
     
 private:
     Image * texture;

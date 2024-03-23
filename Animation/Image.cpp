@@ -66,9 +66,9 @@ Image::Image(const std::string & filename) {
         if (data > maxval) maxval = (int)data;        
     }
     
-    std::cout << numElements << " "  << image.size() << " " << minval << " " << maxval << std::endl;
     
 #if 0
+    std::cout << numElements << " "  << image.size() << " " << minval << " " << maxval << std::endl;
     for (uint y(0); y < m_height; y++) {
         for (uint x(0); x < m_width; x++) {
             for (uint i(0); i < m_colorComponents; ++i) {

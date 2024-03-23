@@ -6,6 +6,7 @@
 #include "polyroots.hpp"
 
 const static float tol = 0.0001f;
+const static double PI = 3.14159265;
 static bool once = true;
 
 Primitive::~Primitive()
@@ -30,6 +31,11 @@ NonhierBox::~NonhierBox()
 }
 
 TexturePlane::~TexturePlane() {
+    delete texture;
+}
+
+
+TextureSphere::~TextureSphere() {
     delete texture;
 }
 
@@ -65,38 +71,17 @@ static float truncate_float_errors(float val) {
     return result;
 }
 
-glm::vec3 TexturePlane::ApplyTexture(glm::vec3 pos) {
-    glm::vec3 result(0);
-    
-    uint tw = texture->width();
-    uint th = texture->height();    
-    
-#if 1
-    double R = 255.0 * (*texture)(16, 29, 0);
-    double G = 255.0 * (*texture)(16, 29, 1);
-    double B = 255.0 * (*texture)(16, 29, 2);
-    if (once) {        
-        once = false;
-        std::cout << "Texture_image_width " << tw << " height "
-                  << th << std::endl;
-        std::cout << "colour at (16,29): " << R << " " << G << " " << B << std::endl;
-    }
-#endif    
+glm::vec3 MapTexture(float u, float v, const Image * texture) {
 
-    float u, v, di, dj, up, vp;
+    glm::vec3 result(0);
+    float di, dj, up, vp;
     int i, j;
     glm::vec3 C00, C01, C10, C11;
+ 
+    uint tw = texture->width();
+    uint th = texture->height();
+    v = 1.0f - v;
 
-    if (normal.x == 1) {
-        u = pos.z;
-        v = 1.0 - pos.y;
-    } else if (normal.y == 1) {
-        u = pos.x;
-        v = pos.z;
-    } else if (normal.z == 1) {
-        u = pos.x;
-        v = 1.0 - pos.y;
-    }
     di = (tw - 1.0) * u;
     dj = (th - 1.0) * v;
     i = (int)di;
@@ -122,12 +107,46 @@ glm::vec3 TexturePlane::ApplyTexture(glm::vec3 pos) {
         std::cout << "colour at (408, 223): " << R << " " << G << " " << B << std::endl;        
     }
 #endif    
+
 #if 1
     result = C00 * (1.0f - up) * (1.0f - vp) + C01 * (1.0 - up) * vp
         + C10 * up * (1 - vp) + C11 * up * vp;
 #else
     result = C00;
 #endif
+    return result;
+}
+
+glm::vec3 TexturePlane::ApplyTexture(glm::vec3 pos) {
+    glm::vec3 result(0);
+        
+#if 0
+    double R = 255.0 * (*texture)(16, 29, 0);
+    double G = 255.0 * (*texture)(16, 29, 1);
+    double B = 255.0 * (*texture)(16, 29, 2);
+    if (once) {        
+        once = false;
+        std::cout << "Texture_image_width " << tw << " height "
+                  << th << std::endl;
+        std::cout << "colour at (16,29): " << R << " " << G << " " << B << std::endl;
+    }
+#endif    
+
+    float u, v;
+    
+    if (normal.x == 1) {
+        u = pos.z;
+        v = pos.y;
+    } else if (normal.y == 1) {
+        u = pos.x;
+        v = pos.z;
+    } else if (normal.z == 1) {
+        u = pos.x;
+        v = pos.y;
+    }
+
+    result = MapTexture(u, v, texture);
+    
     return result;
 }
 
@@ -519,4 +538,30 @@ bool Cube::Hit(const glm::vec3 & e, const glm::vec3 & d,
     }
 
     return hit;
+}
+
+bool TextureSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, float epi) {
+    HitRecord record;
+    record.t = FLT_MAX;
+    return TextureSphere::Hit(e, d, record, epi);
+}
+
+bool TextureSphere::Hit(const glm::vec3 & e, const glm::vec3 & d, HitRecord & record, float epi) {
+
+    Sphere s;
+    bool hit = s.Hit(e, d, record, epi);
+    return hit;
+    
+}
+
+glm::vec3 TextureSphere::ApplyTexture(glm::vec3 pos) {
+
+    glm::vec3 n = normalize(pos);
+    
+    float u = atan(n.x/n.z) / (2 * PI) + 0.5f;
+    float v = 0.5f * n.y + 0.5f;
+    
+    glm::vec3 result = MapTexture(u, v, texture);
+
+    return result;
 }

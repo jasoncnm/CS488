@@ -1,7 +1,5 @@
 // Termm--Fall 2020
 
-#define SSAA
-
 #include <glm/ext.hpp>
 #include <thread>
 #include <cassert>
@@ -14,6 +12,7 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 #include "Mesh.hpp"
+#include "options.hpp"
 
 using namespace glm;
 
@@ -91,10 +90,23 @@ static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, Mat
                 break;
             }
             case PrimitiveType::TEXTUREPLANE: {
-                texture = true;
                 TexturePlane * plane = static_cast<TexturePlane *>(gnode->m_primitive);
-                hit = plane->Hit(e, d, record, epi);
-                record.kd += plane->ApplyTexture(record.hit_point);
+                if (plane->Hit(e, d, record, epi)) {
+                    texture = true;
+                    hit = true;
+                    record.kd = plane->ApplyTexture(record.hit_point);
+                    record.ks = record.kd;
+                }
+                break;
+            }
+            case PrimitiveType::TEXTURESPHERE: {
+                TextureSphere * sphere = static_cast<TextureSphere *>(gnode->m_primitive);
+                if (sphere->Hit(e, d, record, epi)) {
+                    texture = true;
+                    hit = true;
+                    record.kd = sphere->ApplyTexture(record.hit_point);
+                    record.ks = record.kd;
+                }
                 break;
             }
                     
@@ -103,8 +115,13 @@ static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, Mat
         } // switch
         if (hit) {
             PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
-            if (!texture) record.kd = mat->getkd();
-            record.ks += mat->getks();
+            if (!texture) {
+                record.kd = mat->getkd();
+                record.ks = mat->getks();
+            } else {
+                record.kd *= mat->getkd();
+                record.ks *= mat->getks();
+            }
             record.shininess = mat->getshininess();                
             record.hit_point = vec3(stack.M * vec4(record.hit_point, 1));
             record.normal = vec3(transpose(stack.inv) * vec4(record.normal, 0));
@@ -183,6 +200,12 @@ static bool Hit(const SceneNode * root, const Ray & ray, MatrixStack & stack) {
                 hit = plane->Hit(e, d, epi);
                 break;
             }
+                   
+            case PrimitiveType::TEXTURESPHERE: {
+                TextureSphere * sphere = static_cast<TextureSphere *>(gnode->m_primitive);
+                hit = sphere->Hit(e, d, epi);
+                break;
+            }
         }
     }
    
@@ -245,7 +268,7 @@ static vec3 RayColour(
         // NOTE: BG colour
         // once = false;
         float y = ray.direction.y;
-        colour += (1.0 - y) * vec3(0.722, 0.306, 0.039) + y * vec3(0.0, 0.0, 0.0);
+        colour += (1.0 - y) * vec3(0.039, 0.306, 0.722) + y * vec3(0.0, 0.0, 0.0);
     }
     
     return colour;
@@ -445,18 +468,27 @@ void A4_Render(
     
     assert(queue.work_order_count == totaltile);
 
+#ifdef MUTI
     std::array<std::thread, _totaltile> threads;
     for (uint i = 0; i < queue.work_order_count; i++) {
         threads[i] = std::thread( [=] { RenderTile(&queue, i); });
     }
+#else
+    for (uint i = 0; i < queue.work_order_count; i++) {
+        RenderTile(&queue, i);
+        progress += step;
+        std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
+    }
 
-    
+#endif
+
+#ifdef MUTI
     for (int i = 0; i < totaltile; i++) {
         progress += step;
         std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
         threads[i].join();
     }
-    
+#endif    
     std::cout << "\nDone!" << std::endl;
 //    std::cout << std::endl << "max " << mx.z << std::endl;
 }
