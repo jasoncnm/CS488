@@ -413,10 +413,8 @@ void A4_Render(
 
 #if 0
     const uint core_count = 1;
-    const uint _totaltile = 1;
 #else
     const uint core_count = 8;
-    const uint _totaltile = 64;
 #endif
     uint tile_w = w / core_count;
     uint tile_h = tile_w;
@@ -457,6 +455,7 @@ void A4_Render(
                 w,
                 h
             };
+            
             queue.work_orders.push_back(order);
 
             queue.work_order_count++;
@@ -469,11 +468,19 @@ void A4_Render(
     assert(queue.work_order_count == totaltile);
 
 #ifdef MUTI
-    std::array<std::thread, _totaltile> threads;
+    std::thread threads[queue.work_order_count];
     for (uint i = 0; i < queue.work_order_count; i++) {
         threads[i] = std::thread( [=] { RenderTile(&queue, i); });
     }
+
+    for (int i = 0; i < queue.work_order_count; i++) {
+        progress += step;
+        std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
+        threads[i].join();
+    }
+
 #else
+
     for (uint i = 0; i < queue.work_order_count; i++) {
         RenderTile(&queue, i);
         progress += step;
@@ -482,13 +489,6 @@ void A4_Render(
 
 #endif
 
-#ifdef MUTI
-    for (int i = 0; i < totaltile; i++) {
-        progress += step;
-        std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
-        threads[i].join();
-    }
-#endif    
     std::cout << "\nDone!" << std::endl;
 //    std::cout << std::endl << "max " << mx.z << std::endl;
 }

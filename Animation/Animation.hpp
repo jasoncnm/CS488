@@ -24,9 +24,6 @@ struct WorkOrder {
 struct WorkQueue {
     std::vector<WorkOrder> work_orders;
     uint work_order_count;
-
-    volatile uint next_work_order_index;
-    volatile uint tile_retired_count;
 };
 
 
