@@ -8,4 +8,6 @@ struct HitRecord {
     float t;
     glm::vec3 hit_point, normal, kd, ks;
     double shininess;
+    uint hit_id = 0;
+    
 };

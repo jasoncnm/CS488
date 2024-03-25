@@ -45,6 +45,7 @@
 #include <cstdio>
 #include <vector>
 #include <map>
+#include <cassert>
 
 #include "lua488.hpp"
 
@@ -470,6 +471,31 @@ int gr_node_set_material_cmd(lua_State* L)
   return 0;
 }
 
+// Set a node's particle
+extern "C"
+int gr_node_set_particles_cmd(lua_State* L)
+{
+    GRLUA_DEBUG_CALL;
+
+    gr_node_ud * selfdata = (gr_node_ud*)luaL_checkudata(L, 1, "gr.node");
+    luaL_argcheck(L, selfdata != 0, 1, "Node expected");
+    SceneNode * self = selfdata->node;
+    
+    GeometryNode * gnode = static_cast<GeometryNode *>(self);
+
+    luaL_argcheck(L, gnode != 0, 1, "Geometry node expected");
+    
+    uint p_count;
+    uint frame_num;
+
+    p_count = luaL_checknumber(L, 2);
+    frame_num = luaL_checknumber(L, 3);
+
+    gnode->SetParticles(p_count, frame_num);
+
+    return 0;
+}
+
 // Add a Scaling transformation to a node.
 extern "C"
 int gr_node_scale_cmd(lua_State* L)
@@ -597,6 +623,7 @@ static const luaL_Reg grlib_node_methods[] = {
   {"__gc", gr_node_gc_cmd},
   {"add_child", gr_node_add_child_cmd},
   {"set_material", gr_node_set_material_cmd},
+  {"set_particles", gr_node_set_particles_cmd},
   {"scale", gr_node_scale_cmd},
   {"rotate", gr_node_rotate_cmd},
   {"translate", gr_node_translate_cmd},

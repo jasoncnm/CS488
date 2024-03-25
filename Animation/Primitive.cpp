@@ -391,7 +391,7 @@ bool Sphere::Hit(const glm::vec3 & e, const glm::vec3 & d,
                 record.t = roots[i];
                 glm::vec3 p = e + (record.t * d);
                 record.normal = (2.0f * (p - m_pos));
-                record.hit_point = p;
+                record.hit_point = p + record.normal * epi;
             }
         }
     }
