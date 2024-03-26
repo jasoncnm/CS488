@@ -10,6 +10,7 @@ s_mat =  gr.material({1,1,1}, {0.3,0.3,0.3}, 50)
 
 particle_mat = gr.material({0.7, 0.1, 0.1}, {0.0, 0.0, 0.0}, 0)
 
+
 -- ##############################################
 -- Instances
 -- ##############################################
@@ -96,14 +97,41 @@ s = gr.texturesphere('s', './textures/jupiter.png')
 s:set_material(wall_mat)
 inst_sphere2:add_child(s)
 
--- Particles
-particles = gr.node('particle')
+-- Particle
 particle_sphere = gr.cube('particle_s')
+particle_sphere:scale(0.7,0.7,0.7)
 particle_sphere:set_material(particle_mat)
-particles:add_child(particle_sphere)
 
+
+particles = {}
+particle_count = 1
 ------------------------------------------------------------------------------------------
+-- ##############################################
+-- Functions
+-- ##############################################
+function InitParticles(node, mesh)
+    for i = 1, particle_count do
+        particle = gr.node('particle')
+        particle:add_child(mesh)
+        particle:translate(0,0,0)
+        node:add_child(particle)
+        particles[i] = particle
+    end
+end
 
+function UpdateParticles()
+    for j = 1, particle_count do
+        particles[j]:translate(0, 0.7, 0)
+    end
+
+end
+
+function UpdateParticlesWithFrame(frame)
+    for k = 1, particle_count do
+        particles[k]:translate(0, 1 * frame, 0)
+    end
+
+end
 -- ##############################################
 -- The Scene
 -- ##############################################
@@ -122,9 +150,10 @@ sphere2:scale(100,100,100)
 scene:add_child(sphere2)
 sphere2:add_child(inst_sphere2)
 
-particles:translate(-5, -15, 5)
-particles:scale(0.7, 0.7, 0.7)
-scene:add_child(particles)
+particleSys = gr.node('particleSys')
+particleSys:translate(-5, -7, 5)
+InitParticles(particleSys, particle_sphere)
+scene:add_child(particleSys)
 
 r_len = 3
 c_len = 3
@@ -145,20 +174,21 @@ imSize = 512
 white_light = gr.light({-100.0, 150.0, 400.0}, {0.9, 0.9, 0.9}, {1, 0, 0})
 magenta_light = gr.light({400.0, 100.0, 150.0}, {0.5, 0.0, 0.5}, {1, 0, 0})
 
-do_animation = false
+do_animation = true
 scale_factor = 20 / 240
 
 if do_animation then
     for i = 1, 24*5 do
-        particle_sphere:set_particles(1, i)
         gr.render(scene,
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
             {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45,
             {0.4, 0.4, 0.4}, {white_light})
-        inst_sphere2:rotate('y', 1);
+        inst_sphere2:rotate('y', 1)
+        UpdateParticles()
     end
 else
-    particle_sphere:set_particles(1,20)
+    UpdateParticlesWithFrame(24)
+    inst_sphere2:rotate('y', 65)
     gr.render(scene,
     'animation.png', imSize, imSize,
     {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45,

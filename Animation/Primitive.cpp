@@ -80,18 +80,19 @@ glm::vec3 MapTexture(float u, float v, const Image * texture) {
  
     uint tw = texture->width();
     uint th = texture->height();
+    // std::cout << tw << " " << th << " " << std::endl;
     v = 1.0f - v;
 
-    di = (tw - 1.0) * u;
-    dj = (th - 1.0) * v;
+    di = ((float)tw - 1.0) * u;
+    dj = ((float)th - 1.0) * v;
     i = (int)di;
     j = (int)dj;
     up = di - i;
     vp = dj - j;
-    
+
     vp = glm::clamp((double)vp, 0.0, 1.0);
     up = glm::clamp((double)up, 0.0, 1.0);
-    
+
     C00 = glm::vec3((*texture)(i, j, 0), (*texture)(i, j, 1), (*texture)(i, j, 2));
     C01 = glm::vec3((*texture)(i, j + 1, 0), (*texture)(i, j + 1, 1), (*texture)(i, j + 1, 2));
     C10 = glm::vec3((*texture)(i+1, j, 0), (*texture)(i+1, j, 1), (*texture)(i+1, j, 2));
@@ -558,7 +559,7 @@ glm::vec3 TextureSphere::ApplyTexture(glm::vec3 pos) {
 
     glm::vec3 n = normalize(pos);
     
-    float u = atan(n.x/n.z) / (2 * PI) + 0.5f;
+    float u = atan(n.x/n.z) / PI + 0.5f;
     float v = 0.5f * n.y + 0.5f;
     
     glm::vec3 result = MapTexture(u, v, texture);

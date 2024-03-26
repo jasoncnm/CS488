@@ -9,40 +9,10 @@ GeometryNode::GeometryNode(
     : SceneNode( name )
     , m_material( mat )
     , m_primitive( prim )
-    , is_particle( false )
 {
     m_nodeType = NodeType::GeometryNode;
 }
 
-
-//---------------------------------------------------------------------------------------
-GeometryNode::GeometryNode(
-    const std::string & name, Primitive *prim, uint particle_count,  Material *mat )
-        : SceneNode( name )
-        , m_material( mat )
-        , m_primitive( prim )
-{
-    m_nodeType = NodeType::GeometryNode;
-    SetParticles(particle_count, 0);
-}
-
-//---------------------------------------------------------------------------------------
-void GeometryNode::SetParticles(uint particle_count, uint frame_num) {
-
-    this->is_particle = true;
-    this->particle_count = particle_count;
-    this->frame_num = frame_num;
-
-    for (uint i = 0; i < particle_count; i++) {
-        Particle * particle = particles + i;
-        // TODO: Initial Random Position for each particle
-        // TODO: What is the ideal speed of the particle? should it be randomized?
-        particle->trans = glm::mat4(1);
-        particle->pos = glm::vec3(0);
-        particle->dpos = glm::vec3(0, 0.2, 0);
-    }
-    
-}
 
 //---------------------------------------------------------------------------------------
 GeometryNode::~GeometryNode() {

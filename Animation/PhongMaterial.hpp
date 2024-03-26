@@ -13,10 +13,11 @@ public:
     glm::vec3 getkd();
     glm::vec3 getks();
     double getshininess();
-
+                
 private:
   glm::vec3 m_kd;
   glm::vec3 m_ks;
 
   double m_shininess;
 };
+

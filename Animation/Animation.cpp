@@ -60,90 +60,63 @@ static bool Hit(const SceneNode * root, const Ray & ray, HitRecord & record, Mat
         bool texture = false;
         uint index = 0;
         // float t = gnode->frame_num / (24.0f * 10.0f);
-
-        do {
-            glm::mat4 M;
-            vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
-            vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
-            Primitive * prim = gnode->m_primitive;
-            if (gnode->is_particle) {
-                Particle particle;
-                particle = gnode->particles[index];   
-                vec3 amount = gnode->frame_num * particle.dpos;
-
-#if 1
-                M = glm::translate(amount) * particle.trans;
-                e = vec3(glm::inverse(M) * vec4(e, 1));
-                d = vec3(glm::inverse(M) * vec4(d, 0));
-#else
-                amount = particle.pos + gnode->frame_num * particle.dpos;
-                e 
-#endif
-                
-            }
+        vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
+        vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
+        Primitive * prim = gnode->m_primitive;
             
-            switch (prim->type) {
-                case PrimitiveType::NHSPHERE: {
-                    NonhierSphere * sphere = static_cast<NonhierSphere *>(prim);
-                    hit = sphere->Hit(e, d, record, epi);
-                    break;
-                }
-                case PrimitiveType::NHBOX: {
-                    NonhierBox * box = static_cast<NonhierBox *>(prim);
-                    hit = box->Hit(e, d, record, epi);                
-                
-                    break;
-                }
-                case PrimitiveType::MESH: {
-                    Mesh * mesh = static_cast<Mesh *>(prim);
-                    hit = mesh->Hit(e, d, record, epi);
-                    break;
-                }
-                case PrimitiveType::CUBE: {
-                    Cube * cube = static_cast<Cube *>(prim);
-                    hit = cube->Hit(e, d, record, epi);
-                    break;
-                }
-                case PrimitiveType::SPHERE: {
-                    Sphere * sphere = static_cast<Sphere *>(prim);
-                    hit = sphere->Hit(e, d, record, epi);
-                    break;
-                }
-                case PrimitiveType::TEXTUREPLANE: {
-                    TexturePlane * plane = static_cast<TexturePlane *>(prim);
-                    if (plane->Hit(e, d, record, epi)) {
-                        texture = true;
-                        hit = true;
-                        record.kd = plane->ApplyTexture(record.hit_point);
-                        record.ks = record.kd;
-                    }
-                    break;
-                }
-                case PrimitiveType::TEXTURESPHERE: {
-                    TextureSphere * sphere = static_cast<TextureSphere *>(prim);
-                    if (sphere->Hit(e, d, record, epi)) {
-                        texture = true;
-                        hit = true;
-                        record.kd = sphere->ApplyTexture(record.hit_point);
-                        record.ks = record.kd;
-                    }
-                    break;
-                }
-                    
-                default:
-                    break;
-            } // switch
-            if (gnode->is_particle) {                
-                record.hit_point = vec3(M * vec4(record.hit_point, 1));
-                record.normal = vec3(transpose(inverse(M)) * vec4(record.normal, 0));
-                record.normal = normalize(record.normal);
+        switch (prim->type) {
+            case PrimitiveType::NHSPHERE: {
+                NonhierSphere * sphere = static_cast<NonhierSphere *>(prim);
+                hit = sphere->Hit(e, d, record, epi);
+                break;
             }
-            index++;
-      
-        } while (gnode->is_particle && index < gnode->particle_count);
+            case PrimitiveType::NHBOX: {
+                NonhierBox * box = static_cast<NonhierBox *>(prim);
+                hit = box->Hit(e, d, record, epi);                
+                
+                break;
+            }
+            case PrimitiveType::MESH: {
+                Mesh * mesh = static_cast<Mesh *>(prim);
+                hit = mesh->Hit(e, d, record, epi);
+                break;
+            }
+            case PrimitiveType::CUBE: {
+                Cube * cube = static_cast<Cube *>(prim);
+                hit = cube->Hit(e, d, record, epi);
+                break;
+            }
+            case PrimitiveType::SPHERE: {
+                Sphere * sphere = static_cast<Sphere *>(prim);
+                hit = sphere->Hit(e, d, record, epi);
+                break;
+            }
+            case PrimitiveType::TEXTUREPLANE: {
+                TexturePlane * plane = static_cast<TexturePlane *>(prim);
+                if (plane->Hit(e, d, record, epi)) {
+                    texture = true;
+                    hit = true;
+                    record.kd = plane->ApplyTexture(record.hit_point);
+                    record.ks = record.kd;
+                }
+                break;
+            }
+            case PrimitiveType::TEXTURESPHERE: {
+                TextureSphere * sphere = static_cast<TextureSphere *>(prim);
+                if (sphere->Hit(e, d, record, epi)) {
+                    texture = true;
+                    hit = true;
+                    record.kd = sphere->ApplyTexture(record.hit_point);
+                    record.ks = record.kd;
+                }
+                break;
+            }
+                    
+            default:
+                break;
+        } // switch
         
         if (hit) {
-            record.hit_id = root->m_nodeId;
             PhongMaterial * mat = static_cast<PhongMaterial *>(gnode->m_material);
             if (once) {
                 std::cout << "ray hit particle" << std::endl;  
@@ -188,91 +161,75 @@ static bool Hit(const SceneNode * root, const Ray & ray, MatrixStack & stack, ui
         //float epi = l * minhit;    
         float epi = minhit;
 
-        uint index = 0;
-        
-        do {
-            glm::mat4 M;
-            vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
-            vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
-            // float t = gnode->frame_num / (24.0f * 10.0f);
-            Primitive * prim = gnode->m_primitive;
-            Particle particle;
+        Primitive * prim = gnode->m_primitive;
+        vec3 e = vec3(stack.inv * vec4(ray.origin, 1));
+        vec3 d = vec3(stack.inv * vec4(ray.direction, 0));
             
-            if (gnode->is_particle) {
-                particle = gnode->particles[index];
-                vec3 amount = gnode->frame_num * particle.dpos;
-                M = glm::translate(amount) * particle.trans;
-                e = vec3(glm::inverse(M) * vec4(e, 1));
-                d = vec3(glm::inverse(M) * vec4(d, 0));                
+            
+        switch (gnode->m_primitive->type) {
+            case PrimitiveType::NHSPHERE: {
+                NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
+                if (sphere->Hit(e, d, epi)) {
+                    hit = true;
+                }
+                break;
             }
-            
-            switch (gnode->m_primitive->type) {
-                case PrimitiveType::NHSPHERE: {
-                    NonhierSphere * sphere = static_cast<NonhierSphere *>(gnode->m_primitive);
-                    if (sphere->Hit(e, d, epi)) {
-                        hit = true;
-                    }
-                    break;
+            case PrimitiveType::NHBOX: {
+                NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
+                if (box->Hit(e, d, epi)) {
+                    hit = true;
+                }                    
+                break;
+            }
+            case PrimitiveType::MESH: {
+                Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
+                if (mesh->Hit(e, d, epi)) {
+                    hit = true;
                 }
-                case PrimitiveType::NHBOX: {
-                    NonhierBox * box = static_cast<NonhierBox *>(gnode->m_primitive);
-                    if (box->Hit(e, d, epi)) {
-                        hit = true;
-                    }                    
-                    break;
+                break;
+            }                
+            case PrimitiveType::CUBE: {
+                Cube * cube = static_cast<Cube *>(gnode->m_primitive);
+                if (cube->Hit(e, d, epi)) {
+                    hit = true;
                 }
-                case PrimitiveType::MESH: {
-                    Mesh * mesh = static_cast<Mesh *>(gnode->m_primitive);
-                    if (mesh->Hit(e, d, epi)) {
-                        hit = true;
-                    }
-                    break;
-                }                
-                case PrimitiveType::CUBE: {
-                    Cube * cube = static_cast<Cube *>(gnode->m_primitive);
-                    if (cube->Hit(e, d, epi)) {
-                        hit = true;
-                    }
-                    if (hit && once) {
-                        std::cout << "shadow ray hit cube" << std::endl;
-                    }                    
-                    break;
+                if (hit && once) {
+                    std::cout << "shadow ray hit cube" << std::endl;
+                }                    
+                break;
+            }
+            case PrimitiveType::SPHERE: {
+                Sphere * sphere = static_cast<Sphere *>(gnode->m_primitive);
+                if (sphere->Hit(e, d, epi)) {
+                    hit = true;
                 }
-                case PrimitiveType::SPHERE: {
-                    Sphere * sphere = static_cast<Sphere *>(gnode->m_primitive);
-                    if (sphere->Hit(e, d, epi)) {
-                        hit = true;
-                    }
-                    break;
-                    if (hit && once) {
-                        std::cout << "shadow ray hit sphere" << std::endl;
-                    }
-                    break;
+                break;
+                if (hit && once) {
+                    std::cout << "shadow ray hit sphere" << std::endl;
                 }
+                break;
+            }
                 
-                case PrimitiveType::TEXTUREPLANE: {
-                    TexturePlane * plane = static_cast<TexturePlane *>(gnode->m_primitive);
-                    hit = plane->Hit(e, d, epi);
-                    if (hit && once) {
-                        std::cout << "shadow ray hit plane" << std::endl;
-                    }
-                    break;
+            case PrimitiveType::TEXTUREPLANE: {
+                TexturePlane * plane = static_cast<TexturePlane *>(gnode->m_primitive);
+                hit = plane->Hit(e, d, epi);
+                if (hit && once) {
+                    std::cout << "shadow ray hit plane" << std::endl;
                 }
-                   
-                case PrimitiveType::TEXTURESPHERE: {
-                    TextureSphere * sphere = static_cast<TextureSphere *>(gnode->m_primitive);
-                    hit = sphere->Hit(e, d, epi);
-                    if (hit && once) {
-                        std::cout << "shadow ray hit texturesphere" << std::endl;
-                    }
-                    break;
-                }
+                break;
             }
-            index++;
-        } while (gnode->is_particle && index < gnode->particle_count);
+                   
+            case PrimitiveType::TEXTURESPHERE: {
+                TextureSphere * sphere = static_cast<TextureSphere *>(gnode->m_primitive);
+                hit = sphere->Hit(e, d, epi);
+                if (hit && once) {
+                    std::cout << "shadow ray hit texturesphere" << std::endl;
+                }
+                break;
+            }
+        }
 
     }
-    hit &= (id != root->m_nodeId);
     for (const SceneNode * node : root->children) {
         hit |= Hit(node, ray, stack, id);
     }
@@ -316,7 +273,8 @@ static vec3 RayColour(
     uint maxhit,
     const vec3 ambient,
     const vec3 eye,
-    const std::list<Light *> & lights)
+    const std::list<Light *> & lights
+                      )
 {
     vec3 colour;
     MatrixStack stack = {mat4(1.), mat4(1.)};
@@ -336,7 +294,8 @@ static vec3 RayColour(
             Ray reflect;
             reflect.origin = record.hit_point;
             reflect.direction = normalize(Reflect(ray.direction, record.normal));
-            colour += 0.5f * record.ks * RayColour(root, reflect, maxhit, ambient, eye, lights);
+            colour += 0.5f * record.ks * RayColour(root, reflect, maxhit,
+                                                   ambient, eye, lights);
         }
         
     } else {
@@ -372,29 +331,26 @@ void RenderTile(const WorkQueue * queue, uint index) {
     for (uint y = ymin; y < onepass_ymax; y++) {
         for (uint x = xmin; x < onepass_xmax; x++) {
             colour = vec3(0);
+
+#if 0
             if (x == 132 && y == 115) {
                 std::cout << " x " << x << " y " << y << std::endl;
                 once = true;
             } else {
                 once = false;
             }
+#endif
 #ifdef SSAA
             for (int i = 0; i < 9; i++) {
 
                 double randnum = ((double)rand()) / INT_MAX;
                 assert((0.0 <= randnum + tol) && (randnum <= 1.0 + tol)); 
-#if 1
                 // NOTE: jittering
                 float jitter = (float)(randnum / 3) - (1.0f / 6.0f);
                 
                 float _x = (float)x + offsets[i].x + jitter;
                 float _y = (float)y + offsets[i].y + jitter;
-#else
-                // NOTE: Random sampling
-                float jitter = (float)(randnum) - 0.5f;
-                float _x = (float)x + jitter;
-                float _y = (float)y + jitter;
-#endif
+
                 vec4 pw = trans * vec4(_x, h - 1 - _y, 0, 1);            
                 Ray ray;
                 ray.origin = eye;
@@ -447,7 +403,7 @@ void A4_Render(
     srand(time(NULL));
 
     // Fill in raytracing code here...
-#if 1
+#if 0
     std::cout << "F20: Calling A4_Render(\n" <<
         "\t" << *root <<
         "\t" << "Image(width:" << image.width() << ", height:" << image.height() << ")\n"

@@ -136,3 +136,29 @@ std::ostream & operator << (std::ostream & os, const SceneNode & node) {
     os << "]\n";
     return os;
 }
+
+
+
+
+#if 0
+//---------------------------------------------------------------------------------------
+void SceneNode::InitParticles(uint particle_count, uint frame_num) {
+
+    this->is_particle = true;
+    this->particle_count = particle_count;
+    this->frame_num = frame_num;
+
+    for (uint i = 0; i < particle_count; i++) {
+        // TODO: Initial Random Position for each particle
+        // TODO: What is the ideal speed of the particle? should it be randomized?
+        vec3 dpos(0, 0.2, 0);
+        GeometryNode * gnode = new GeometryNode( m_name, new Cube() );
+        
+    }
+    
+}
+
+//---------------------------------------------------------------------------------------
+void SceneNode::UpdateParticles(uint frame_num);
+
+#endif
