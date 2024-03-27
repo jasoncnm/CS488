@@ -98,26 +98,38 @@ s:set_material(wall_mat)
 inst_sphere2:add_child(s)
 
 -- Particle
-particle_sphere = gr.cube('particle_s')
-particle_sphere:scale(0.7,0.7,0.7)
-particle_sphere:set_material(particle_mat)
+particle_cube = gr.cube('particle_c')
+particle_cube:scale(0.5,0.5,0.5)
+particle_cube:set_material(particle_mat)
 
 
 particles = {}
+intervals = {}
+offx = {}
+offy = {}
+offz = {}
 activated = {}
 particle_count = 10
 ------------------------------------------------------------------------------------------
 -- ##############################################
 -- Functions
 -- ##############################################
+
+
 function InitParticles(node, mesh)
     for i = 1, particle_count do
         particle = gr.node('particle')
         particle:add_child(mesh)
-        particle:translate(math.random(-5,5),0,0)
+        particle:translate(math.random(-3,3),0,math.random(-3,3))
         node:add_child(particle)
         particles[i] = particle
         activated[i] = false
+        intervals[i] = 0
+        off = math.random(-1, 1)
+        off = off / 5
+        offx[i] = off
+        offy[i] = 0
+        offz[i] = off
     end
 end
 
@@ -131,7 +143,7 @@ end
 function AddParticle(node, mesh) 
     particle = gr.node('particle')
     particle:add_child(mesh)
-    particle:translate(math.random(-5,5),0,0)
+    particle:translate(math.random(-3,3),0,0)
     node:add_child(particle)
     particles[particle_count] = particle
     particle_count = particle_count + 1
@@ -141,11 +153,24 @@ function ActivateParticle(index)
     activated[index] = true
 end
 
-function UpdateParticles()
+function UpdateParticles(reset_frame)
     for j = 1, particle_count do
         if activated[j] then
-            off = math.random(-1, 1) - 0.5
-            particles[j]:translate(off, 0.7, off)
+            if intervals[j] > reset_frame then 
+                intervals[j] = 0
+                particles[j]:reset()
+                -- math.randomseed(os.time)
+                particles[j]:translate(math.random(-3,3),0,math.random(-3,3))
+                off = math.random(-1, 1)
+                off = off / 10
+                offx[j] = off
+                offy[j] = 0
+                offz[j] = off
+                return
+            end
+            intervals[j] = intervals[j] + 1
+            particles[j]:translate(offx[j], 0.5 + offy[j], offz[j])
+            
         end
     end
 
@@ -177,8 +202,8 @@ scene:add_child(sphere2)
 sphere2:add_child(inst_sphere2)
 
 particleSys = gr.node('particleSys')
-particleSys:translate(-5, -8, 5)
-InitParticles(particleSys, particle_sphere)
+particleSys:translate(-5, -11, 5)
+InitParticles(particleSys, particle_cube)
 scene:add_child(particleSys)
 
 r_len = 3
@@ -203,6 +228,9 @@ magenta_light = gr.light({400.0, 100.0, 150.0}, {0.5, 0.0, 0.5}, {1, 0, 0})
 do_animation = true
 scale_factor = 20 / 240
 
+direction = -1
+sphere1_posy = 0
+sphere1_offy = 0.25
 if do_animation then
     for i = 1, 24*5 do
         index = i % 15
@@ -210,17 +238,23 @@ if do_animation then
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
             {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45,
             {0.4, 0.4, 0.4}, {white_light})
-        inst_sphere2:rotate('y', 1)
+        inst_sphere2:rotate('y', scale_factor)
         if (index <= particle_count) then
             ActivateParticle(index)
-        else
-            --ResetParticles()
         end
-        UpdateParticles()
+        UpdateParticles(15)
+        amount = direction * sphere1_offy
+        sphere1:translate(0, amount, 0)
+        sphere1_posy = sphere1_posy + amount
+        if math.abs(sphere1_posy) >= 7 then
+            direction = direction * -1
+            sphere1_posy = 0
+        end
+
     end
 else
-    UpdateParticlesWithFrame(10)
-    inst_sphere2:rotate('y', 65)
+    sphere1:translate(0, -7, 0)
+        
     gr.render(scene,
     'animation.png', imSize, imSize,
     {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45,
