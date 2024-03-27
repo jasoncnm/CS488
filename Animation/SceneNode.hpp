@@ -35,6 +35,7 @@ public:
     void add_child(SceneNode* child);
     
     void remove_child(SceneNode* child);
+    void reset_transform();
 
     //-- Transformations:
     void rotate(char axis, float angle);

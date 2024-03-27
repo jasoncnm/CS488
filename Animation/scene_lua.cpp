@@ -542,6 +542,22 @@ int gr_node_translate_cmd(lua_State* L)
   return 0;
 }
 
+// Reset node Translation.
+extern "C"
+int gr_node_translate_reset_cmd(lua_State* L)
+{
+
+    GRLUA_DEBUG_CALL;
+  
+    gr_node_ud* selfdata = (gr_node_ud*)luaL_checkudata(L, 1, "gr.node");
+    luaL_argcheck(L, selfdata != 0, 1, "Node expected");
+
+    SceneNode* self = selfdata->node;
+    self->reset_transform();
+
+    return 0;
+}
+
 // Rotate a node.
 extern "C"
 int gr_node_rotate_cmd(lua_State* L)
@@ -629,6 +645,7 @@ static const luaL_Reg grlib_node_methods[] = {
   {"scale", gr_node_scale_cmd},
   {"rotate", gr_node_rotate_cmd},
   {"translate", gr_node_translate_cmd},
+  {"reset", gr_node_translate_reset_cmd},
   {"render", gr_render_cmd},
   {0, 0}
 };

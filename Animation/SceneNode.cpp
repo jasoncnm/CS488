@@ -113,6 +113,14 @@ int SceneNode::totalSceneNodes() const {
     return nodeInstanceCount;
 }
 
+
+//---------------------------------------------------------------------------------------
+void SceneNode::reset_transform() {
+    set_transform( glm::mat4(1.) );
+}
+
+
+
 //---------------------------------------------------------------------------------------
 std::ostream & operator << (std::ostream & os, const SceneNode & node) {
 

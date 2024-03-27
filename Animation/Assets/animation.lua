@@ -104,7 +104,8 @@ particle_sphere:set_material(particle_mat)
 
 
 particles = {}
-particle_count = 1
+activated = {}
+particle_count = 10
 ------------------------------------------------------------------------------------------
 -- ##############################################
 -- Functions
@@ -113,22 +114,47 @@ function InitParticles(node, mesh)
     for i = 1, particle_count do
         particle = gr.node('particle')
         particle:add_child(mesh)
-        particle:translate(0,0,0)
+        particle:translate(math.random(-5,5),0,0)
         node:add_child(particle)
         particles[i] = particle
+        activated[i] = false
     end
+end
+
+function ResetParticles()
+    for x = 1, particle_count do
+        activated[x] = false
+        particles[x]:reset()
+    end
+end
+
+function AddParticle(node, mesh) 
+    particle = gr.node('particle')
+    particle:add_child(mesh)
+    particle:translate(math.random(-5,5),0,0)
+    node:add_child(particle)
+    particles[particle_count] = particle
+    particle_count = particle_count + 1
+end
+
+function ActivateParticle(index) 
+    activated[index] = true
 end
 
 function UpdateParticles()
     for j = 1, particle_count do
-        particles[j]:translate(0, 0.7, 0)
+        if activated[j] then
+            off = math.random(-1, 1) - 0.5
+            particles[j]:translate(off, 0.7, off)
+        end
     end
 
 end
 
 function UpdateParticlesWithFrame(frame)
     for k = 1, particle_count do
-        particles[k]:translate(0, 1 * frame, 0)
+        randm = (math.random(1) - 0.5) * frame
+        particles[k]:translate(randm, 0.5 + randm, randm)
     end
 
 end
@@ -151,7 +177,7 @@ scene:add_child(sphere2)
 sphere2:add_child(inst_sphere2)
 
 particleSys = gr.node('particleSys')
-particleSys:translate(-5, -7, 5)
+particleSys:translate(-5, -8, 5)
 InitParticles(particleSys, particle_sphere)
 scene:add_child(particleSys)
 
@@ -179,15 +205,21 @@ scale_factor = 20 / 240
 
 if do_animation then
     for i = 1, 24*5 do
+        index = i % 15
         gr.render(scene,
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
             {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45,
             {0.4, 0.4, 0.4}, {white_light})
         inst_sphere2:rotate('y', 1)
+        if (index <= particle_count) then
+            ActivateParticle(index)
+        else
+            --ResetParticles()
+        end
         UpdateParticles()
     end
 else
-    UpdateParticlesWithFrame(24)
+    UpdateParticlesWithFrame(10)
     inst_sphere2:rotate('y', 65)
     gr.render(scene,
     'animation.png', imSize, imSize,
