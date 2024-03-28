@@ -304,7 +304,7 @@ static vec3 RayColour(
         // NOTE: BG colour
         // once = false;
         float y = ray.direction.y;
-        colour += (1.0 - y) * vec3(0.039, 0.306, 0.722) + y * vec3(0.0, 0.0, 0.0);
+        colour += (1.0 - y) * vec3(0.039, 0.1, 0.4) + y * vec3(0.0, 0.0, 0.0);
     }
     
     return colour;

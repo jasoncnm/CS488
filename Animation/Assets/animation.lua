@@ -8,8 +8,12 @@ floor_mat = gr.material({1, 1.0, 1}, { 0.8, 0.8, 0.8}, 25)
 wall_mat = gr.material({1,1,1}, {0.0, 0.0, 0.0}, 0)
 s_mat =  gr.material({1,1,1}, {0.3,0.3,0.3}, 50)
 
-particle_mat = gr.material({0.2, 0.2, 0.6}, {0.5, 0.5, 0.5}, 10)
+particle_mat = gr.material({1, 0.65, 0.0}, {0.5, 0.5, 0.5}, 10)
 
+white_light = gr.light({-100.0, 150.0, 400.0}, {0.9, 0.9, 0.9}, {1, 0, 0})
+magenta_light = gr.light({0.0, 10.0, 0.0}, {0, 0.5, 0.5}, {0.2, 0, 0})
+
+lights = {white_light}
 
 -- ##############################################
 -- Instances
@@ -130,6 +134,7 @@ function InitParticles(node, mesh)
         offx[i] = off
         offy[i] = 0
         offz[i] = off
+
     end
 end
 
@@ -160,7 +165,7 @@ function UpdateParticles(reset_frame)
                 intervals[j] = 0
                 particles[j]:reset()
                 -- math.randomseed(os.time)
-                particles[j]:translate(math.random(-3,3),0,math.random(-3,3))
+                particles[j]:translate(math.random(-7,7),0,math.random(-7,7))
                 off = math.random(-1, 1)
                 off = off / 10
                 offx[j] = off
@@ -222,10 +227,9 @@ end
 --scene:add_child(inst_wall)
 
 imSize = 512
-white_light = gr.light({-100.0, 150.0, 400.0}, {0.9, 0.9, 0.9}, {1, 0, 0})
-magenta_light = gr.light({400.0, 100.0, 150.0}, {0.5, 0.0, 0.5}, {1, 0, 0})
 
-do_animation = true
+
+do_animation = false
 scale_factor = 20 / 240
 
 direction = -1
@@ -241,7 +245,7 @@ if do_animation then
         gr.render(scene,
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
             {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45, amp,
-            {0.4, 0.4, 0.4}, {white_light})
+            {0.4, 0.4, 0.4}, lights)
         inst_sphere2:rotate('y', scale_factor)
         if (index <= particle_count) then
             ActivateParticle(index)
@@ -255,11 +259,14 @@ if do_animation then
             sphere1_posy = 0
         end
         amp = amp + amp_off
+        if amp >= 0.5 then
+            amp = 0.5
+        end
     end
 else
     sphere1:translate(0, -7, 0)
         
     gr.render(scene, 'animation.png', imSize, imSize,
-    {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45, 0.5,
-    {0.4, 0.4, 0.4}, {white_light})
+    {0, 2, 50}, {0, 0, -1}, {0, 1, 0}, 45, 0,
+    {0.4, 0.4, 0.4}, lights)
 end
