@@ -57,6 +57,7 @@ void A4_Render(
         const glm::vec3 & view,
         const glm::vec3 & up,
         double fovy,
+        double amp,
 
         // Lighting parameters
         const glm::vec3 & ambient,

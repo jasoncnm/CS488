@@ -376,19 +376,21 @@ int gr_render_cmd(lua_State* L)
 
   double fov = luaL_checknumber(L, 8);
 
+  double amp = luaL_checknumber(L, 9);
+  
   double ambient_data[3];
-  get_tuple(L, 9, ambient_data, 3);
+  get_tuple(L, 10, ambient_data, 3);
   glm::vec3 ambient(ambient_data[0], ambient_data[1], ambient_data[2]);
 
-  luaL_checktype(L, 10, LUA_TTABLE);
-  int light_count = int(lua_rawlen(L, 10));
+  luaL_checktype(L, 11, LUA_TTABLE);
+  int light_count = int(lua_rawlen(L, 11));
   
-  luaL_argcheck(L, light_count >= 1, 10, "Tuple of lights expected");
+  luaL_argcheck(L, light_count >= 1, 11, "Tuple of lights expected");
   std::list<Light*> lights;
   for (int i = 1; i <= light_count; i++) {
-    lua_rawgeti(L, 10, i);
+    lua_rawgeti(L, 11, i);
     gr_light_ud* ldata = (gr_light_ud*)luaL_checkudata(L, -1, "gr.light");
-    luaL_argcheck(L, ldata != 0, 10, "Light expected");
+    luaL_argcheck(L, ldata != 0, 11, "Light expected");
 
     lights.push_back(ldata->light);
     lua_pop(L, 1);
@@ -396,7 +398,7 @@ int gr_render_cmd(lua_State* L)
 
     Image im( width, height);
     std::cout << filename << std::endl;
-    A4_Render(root->node, im, eye, view, up, fov, ambient, lights);
+    A4_Render(root->node, im, eye, view, up, fov, amp, ambient, lights);
     im.savePng( filename );
 
     return 0;

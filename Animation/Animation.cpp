@@ -294,6 +294,7 @@ static vec3 RayColour(
             Ray reflect;
             reflect.origin = record.hit_point;
             reflect.direction = normalize(Reflect(ray.direction, record.normal));
+            
             colour += 0.5f * record.ks * RayColour(root, reflect, maxhit,
                                                    ambient, eye, lights);
         }
@@ -309,7 +310,7 @@ static vec3 RayColour(
     return colour;
 }
 
-void RenderTile(const WorkQueue * queue, uint index) {
+void RenderTile(const WorkQueue * queue, uint index, double amp) {
 
     const WorkOrder & order = queue->work_orders[index];
     
@@ -353,7 +354,12 @@ void RenderTile(const WorkQueue * queue, uint index) {
 
                 vec4 pw = trans * vec4(_x, h - 1 - _y, 0, 1);            
                 Ray ray;
-                ray.origin = eye;
+
+                double randeyex = amp * (((double)rand()) / INT_MAX) - 0.5 * amp;
+                double randeyey = amp * (((double)rand()) / INT_MAX) - 0.5 * amp;
+                
+                ray.origin = vec3(eye.x + randeyex, eye.y + randeyey, eye.z);
+                
                 ray.direction = normalize(vec3(pw) - ray.origin);
             
                 colour += RayColour(root, ray, 0, ambient, eye, lights);
@@ -395,15 +401,16 @@ void A4_Render(
     const glm::vec3 & view,
     const glm::vec3 & up,
     double fovy,
+    double amp,
 
     // Lighting parameters  
     const glm::vec3 & ambient,
     const std::list<Light *> & lights
                ) {
     srand(time(NULL));
-
+    
     // Fill in raytracing code here...
-#if 0
+#if 1
     std::cout << "F20: Calling A4_Render(\n" <<
         "\t" << *root <<
         "\t" << "Image(width:" << image.width() << ", height:" << image.height() << ")\n"
@@ -411,6 +418,7 @@ void A4_Render(
         "\t" << "view: " << glm::to_string(view) << std::endl <<
         "\t" << "up:   " << glm::to_string(up) << std::endl <<
         "\t" << "fovy: " << fovy << std::endl <<
+        "\t" << "amp:  " << amp << std::endl << 
         "\t" << "ambient: " << glm::to_string(ambient) << std::endl <<
         "\t" << "lights{" << std::endl;
 
@@ -507,7 +515,7 @@ void A4_Render(
 #ifdef MUTI
     std::thread threads[queue.work_order_count];
     for (uint i = 0; i < queue.work_order_count; i++) {
-        threads[i] = std::thread( [=] { RenderTile(&queue, i); });
+        threads[i] = std::thread( [=] { RenderTile(&queue, i, amp); });
     }
 
     for (int i = 0; i < queue.work_order_count; i++) {
@@ -519,7 +527,7 @@ void A4_Render(
 #else
 
     for (uint i = 0; i < queue.work_order_count; i++) {
-        RenderTile(&queue, i);
+        RenderTile(&queue, i, amp);
         progress += step;
         std::cout << '\r'  << "progress: " << (int)progress << "%"  << std::flush;
     }
