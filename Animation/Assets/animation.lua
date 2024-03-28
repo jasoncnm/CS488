@@ -8,7 +8,7 @@ floor_mat = gr.material({1, 1.0, 1}, { 0.8, 0.8, 0.8}, 25)
 wall_mat = gr.material({1,1,1}, {0.0, 0.0, 0.0}, 0)
 s_mat =  gr.material({1,1,1}, {0.3,0.3,0.3}, 50)
 
-particle_mat = gr.material({0.7, 0.7, 0.7}, {0.5, 0.5, 0.5}, 10)
+particle_mat = gr.material({0.2, 0.2, 0.6}, {0.5, 0.5, 0.5}, 10)
 
 
 -- ##############################################
@@ -120,7 +120,7 @@ function InitParticles(node, mesh)
     for i = 1, particle_count do
         particle = gr.node('particle')
         particle:add_child(mesh)
-        particle:translate(math.random(-3,3),0,math.random(-3,3))
+        particle:translate(math.random(-7,7),0,math.random(-7,7))
         node:add_child(particle)
         particles[i] = particle
         activated[i] = false
@@ -236,7 +236,7 @@ amp = 0
 amp_off = 1 / 240
 
 if do_animation then
-    for i = 1, 24*5 do
+    for i = 1, 24*10 do
         index = i % 15
         gr.render(scene,
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
