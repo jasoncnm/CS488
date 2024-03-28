@@ -410,7 +410,7 @@ void A4_Render(
     srand(time(NULL));
     
     // Fill in raytracing code here...
-#if 1
+#if 0
     std::cout << "F20: Calling A4_Render(\n" <<
         "\t" << *root <<
         "\t" << "Image(width:" << image.width() << ", height:" << image.height() << ")\n"
