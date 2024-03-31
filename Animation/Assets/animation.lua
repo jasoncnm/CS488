@@ -229,7 +229,7 @@ end
 imSize = 512
 
 
-do_animation = false
+do_animation = true
 scale_factor = 20 / 240
 
 direction = -1
@@ -237,10 +237,10 @@ sphere1_posy = 0
 sphere1_offy = 0.25
 
 amp = 0
-amp_off = 1 / 240
+amp_off = 1 / 360
 
 if do_animation then
-    for i = 1, 24*10 do
+    for i = 1, 24*15 do
         index = i % 15
         gr.render(scene,
             'Animation/animation_' .. string.format("%04d", i) .. '.png', imSize, imSize,
@@ -258,9 +258,10 @@ if do_animation then
             direction = direction * -1
             sphere1_posy = 0
         end
-        amp = amp + amp_off
-        if amp >= 0.5 then
-            amp = 0.5
+        if amp >= 0.6 then
+            amp = amp - amp_off
+        else 
+            amp = amp + amp_off
         end
     end
 else
