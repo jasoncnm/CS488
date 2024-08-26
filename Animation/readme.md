@@ -1,7 +1,7 @@
 ## Animation
 A short video where each frame is rendered using ray tracing. 
 
-##Key features
+#Key features
 
 * local illumination
 * shadows
