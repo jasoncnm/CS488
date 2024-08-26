@@ -68,3 +68,4 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
 
 * Animation Project
 
+  ![Alt text](https://github.com/jasoncnm/CS488/blob/main/Animation/upload/Mao-986.mp4?raw=true)
