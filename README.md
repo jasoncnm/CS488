@@ -1,4 +1,5 @@
-# CS488 Fall 2015 Project Code
+# CS488 Winter 2024 Assignments and Animation Project
+
 
 ---
 
