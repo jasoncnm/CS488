@@ -57,7 +57,7 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
 * A2
  
 * A3
-  ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A3/screenshot.png?raw=true)
+  ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A3/screenshort.png?raw=true)
 * A4
    ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A4/screenshot.png?raw=true)
 
