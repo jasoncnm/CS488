@@ -52,21 +52,20 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
 
  This should point you in the general direction.# CS488
 # CS488 Showcase
-* A1
-  
+* A1 (OpenGL)
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A1/screenshot.png?raw=true)
-* A2
+* A2 (OpenGL)
  
-* A3
+* A3 (OpenGL)
   
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A3/screenshort.png?raw=true)
 
-* A4
+* A4 (RayTracing)
   
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A4/screenshot.png?raw=true)
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A4/picture/macho-cows-SSAA.png?raw=true)
 
-* Animation Project
+* Animation Project(RayTracing)
 
   ![hippo](https://github.com/jasoncnm/CS488/blob/main/Animation/upload/Mao-986.gif)
 
