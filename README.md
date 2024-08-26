@@ -53,7 +53,7 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
  This should point you in the general direction.# CS488
 # CS488 Showcase
 
-![Alt text](relative%20A4/screenshot.png?raw=true "Title")
+![Alt text](relative%./A4/screenshot.png?raw=true "Title")
 
 
 
