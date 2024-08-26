@@ -51,6 +51,13 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
     $ premake4 vs2013
 
  This should point you in the general direction.# CS488
-# CS488
+# CS488 Showcase
+* A1
+  
+* A4
+![Alt text](https://github.com/jasoncnm/CS488/blob/main/A4/screenshot.png?raw=true)
+
+
+
 
 
