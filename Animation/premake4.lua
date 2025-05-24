@@ -62,5 +62,5 @@ solution "CS488-Projects"
         flags { "Symbols" }
 
     configuration "Release"
-        defines { "NDEBUG" }
+        defines { "NDEBUG", "MUTI" }
         flags { "Optimize" }
