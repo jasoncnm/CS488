@@ -54,8 +54,11 @@ Sorry for all of the hardcore Microsoft fans out there.  We have not had time to
 # CS488 Showcase
 * A1 (OpenGL)
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A1/screenshot.png?raw=true)
+  
 * A2 (OpenGL)
- 
+  
+  ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A2/screenshot.png?raw=true)
+  
 * A3 (OpenGL)
   
   ![Alt text](https://github.com/jasoncnm/CS488/blob/main/A3/screenshort.png?raw=true)
